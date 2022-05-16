@@ -24,6 +24,10 @@
 
 The is an HTML template parser. It is a modified version of Python's HTMLParse library, expanded to handle template tags.
 
+### Currently Supported
+
+- [x] Comments
+- [ ] Template tags (if/for/...)
 
 ## 💾 Install
 
