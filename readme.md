@@ -3,11 +3,20 @@
 <h4 align="center">Modified version of Python's HTMLParser for HTML template parsing</h4>
 
 <p align="center">
-  <a href="https://pypi.org/project/html-template-parser/">
-    <img src="https://badgen.net/pypi/v/html-template-parser" alt="Pypi Version">
+  <a href="https://codecov.io/gh/Riverside-Healthcare/html-template-parser">
+    <img src="https://codecov.io/gh/Riverside-Healthcare/html-template-parser/branch/master/graph/badge.svg?token=Chqq9Mai1h"/>
+  </a>
+  <a href="https://github.com/Riverside-Healthcare/html-template-parser/actions/workflows/test.yml">
+    <img src="https://github.com/Riverside-Healthcare/html-template-parser/actions/workflows/test.yml/badge.svg" alt="Test Status">
+  </a>
+  <a href="https://www.codacy.com/gh/Riverside-Healthcare/html-template-parser/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Riverside-Healthcare/html-template-parser&amp;utm_campaign=Badge_Grade">
+    <img src="https://app.codacy.com/project/badge/Grade/43736e5b780a49d88d8ce588f5cfb9bc"/>
   </a>
   <a href="https://pepy.tech/project/html-template-parser">
     <img src="https://static.pepy.tech/badge/html-template-parser" alt="Downloads">
+  </a>
+  <a href="https://pypi.org/project/html-template-parser/">
+    <img src="https://badgen.net/pypi/v/html-template-parser" alt="Pypi Version">
   </a>
 </p>
 
@@ -15,6 +24,10 @@
 
 The is an HTML template parser. It is a modified version of Python's HTMLParse library, expanded to handle template tags.
 
+### Currently Supported
+
+- [x] Comments
+- [ ] Template tags (if/for/...)
 
 ## 💾 Install
 
@@ -49,6 +62,13 @@ parser.feed('<html><head><title>Test</title></head>'
 
 ```
 
-## 🪪 License
+## 🏷 Function Naming Conventions
 
-- [GPL][license] © Riverside Healthcare
+### Comments
+
+- comment `<!-- -->`
+- comment_curly_hash `{# data #}`
+- comment_curly_exlaim `{{! data }}`
+- comment_curly_exlaim_dash `{{!-- data }}`
+- comment_curly_perc `{% comment "attrs" %}data {% endcomment %}`
+- comment_at_star `@* data *@`
