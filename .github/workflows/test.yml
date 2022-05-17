@@ -1,6 +1,10 @@
 name: test
 on:
   pull_request:
+  push:
+    branches:
+    - alpha
+    - master
 
 jobs:
   test:
