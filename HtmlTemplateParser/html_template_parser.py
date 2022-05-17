@@ -44,9 +44,8 @@ charref = re.compile("&#(?:[0-9]+|[xX][0-9a-fA-F]+)[^0-9a-fA-F]")
 
 starttagopen = re.compile("<[a-zA-Z]")
 starttempstateopen = re.compile(r"{%")
-starttempstatecommentopen = re.compile(r"{%\s*comment\s*(?:('|\")(.*?)\1)?\s*%}", re.I)
-endtempstateopen = re.compile(r"{%\s*end", re.I)
-starttempopen = re.compile("{{")
+commentopen_curly_perc = re.compile(r"{%\s*comment\s*(?:('|\")(.*?)\1)?\s*%}", re.I)
+commentclose_curly_perc = re.compile(r"{%\s*end", re.I)
 piclose = re.compile(">")
 commentclose = re.compile(r"--\s*>")
 # Note:
@@ -56,11 +55,34 @@ commentclose = re.compile(r"--\s*>")
 # see http://www.w3.org/TR/html5/tokenization.html#tag-open-state
 # and http://www.w3.org/TR/html5/tokenization.html#tag-name-state
 tagfind_tolerant = re.compile(r"([a-zA-Z][^\t\n\r\f />\x00]*)(?:\s|/(?!>))*")
-tempstatetagfind_tolerant = re.compile(
+tagfind_tolerant_curly_perc = re.compile(
     r"(\s*[a-zA-Z](?:(?!%}|\t|\n|\r|\f| |\x00).)*)(?:\s|/(?!%}))*"
 )
-tempstateattrfind_tolerant = re.compile(
+tagfind_tolerant_curly_hash = re.compile(
+    r"(\s*[a-zA-Z](?:(?!}}|\t|\n|\r|\f| |\x00).)*)(?:\s|/(?!}}))*"
+)
+
+tagfind_tolerant_curly_four = re.compile(
+    r"(\s*[a-zA-Z](?:(?!}}}}|\t|\n|\r|\f| |\x00).)*)(?:\s|/(?!}}}}))*"
+)
+
+tagfind_tolerant_curly = re.compile(
+    r"(\s*[a-zA-Z](?:(?!}}|\t|\n|\r|\f| |\x00).)*)(?:\s|/(?!}}))*"
+)
+
+attrfind_tolerant_curly_perc = re.compile(
     r'((?<=[\'"\s/])(?:(?!%}|\s|/).)(?:(?!%}|\s|/|=).)*)(\s*=+\s*(\'[^\']*\'|"[^"]*"|(?![\'"])(?:(?!%}|\s).)*))?(?:\s|/(?!%}))*'
+)
+attrfind_tolerant_curly_hash = re.compile(
+    r'((?<=[\'"\s/])(?:(?!}}|\s|/).)(?:(?!}}|\s|/|=).)*)(\s*=+\s*(\'[^\']*\'|"[^"]*"|(?![\'"])(?:(?!}}|\s).)*))?(?:\s|/(?!}}))*'
+)
+
+attrfind_tolerant_curly_four = re.compile(
+    r'((?<=[\'"\s/])(?:(?!}}}}|\s|/).)(?:(?!}}}}|\s|/|=).)*)(\s*=+\s*(\'[^\']*\'|"[^"]*"|(?![\'"])(?:(?!}}}}|\s).)*))?(?:\s|/(?!}}}}))*'
+)
+
+attrfind_tolerant_curly = re.compile(
+    r'((?<=[\'"\s/])(?:(?!}}|\s|/).)(?:(?!}}|\s|/|=).)*)(\s*=+\s*(\'[^\']*\'|"[^"]*"|(?![\'"])(?:(?!}}|\s).)*))?(?:\s|/(?!}}))*'
 )
 
 attrfind_tolerant = re.compile(
@@ -86,13 +108,55 @@ locatestarttagend_tolerant = re.compile(
     re.VERBOSE,
 )
 
-locatestarttempstateend_tolerant = re.compile(
+locatestartend_tolerant_curly_perc = re.compile(
     r"""
   {%[\s/]*[a-zA-Z](?:(?!%}|\t|\n|\r|\f| |\x00).)*       # tag name
   (?:[\s/]*                                             # optional whitespace before attribute name
     (?:'[^']*'                   # LITA-enclosed value
       |"[^"]*"                   # LIT-enclosed value
       |(?!['"])(?:(?!%}|\s).)*       # bare value
+    )*
+  )*
+  \s*                                # trailing whitespace
+""",
+    re.VERBOSE,
+)
+
+locatestartend_tolerant_curly_hash = re.compile(
+    r"""
+  {{#[a-zA-Z](?:(?!}}|\t|\n|\r|\f| |\x00).)*       # tag name
+  (?:[\s/]*                                             # optional whitespace before attribute name
+    (?:'[^']*'                   # LITA-enclosed value
+      |"[^"]*"                   # LIT-enclosed value
+      |(?!['"])(?:(?!}}|\s).)*       # bare value
+    )*
+  )*
+  \s*                                # trailing whitespace
+""",
+    re.VERBOSE,
+)
+
+locatestartend_tolerant_curly_four = re.compile(
+    r"""
+  {{{{[a-zA-Z](?:(?!}}}}|\t|\n|\r|\f| |\x00).)*       # tag name
+  (?:[\s/]*                                             # optional whitespace before attribute name
+    (?:'[^']*'                   # LITA-enclosed value
+      |"[^"]*"                   # LIT-enclosed value
+      |(?!['"])(?:(?!}}}}|\s).)*       # bare value
+    )*
+  )*
+  \s*                                # trailing whitespace
+""",
+    re.VERBOSE,
+)
+
+locate_tolerant_curly = re.compile(
+    r"""
+  {{[\s/]*[a-zA-Z](?:(?!}}|\t|\n|\r|\f| |\x00).)*       # tag name
+  (?:[\s/]*                                             # optional whitespace before attribute name
+    (?:'[^']*'                   # LITA-enclosed value
+      |"[^"]*"                   # LIT-enclosed value
+      |(?!['"])(?:(?!}}|\s).)*       # bare value
     )*
   )*
   \s*                                # trailing whitespace
@@ -113,11 +177,15 @@ locatestarttempend_tolerant = re.compile(
 
 
 endendtag = re.compile(">")
-endtempstateendtag = re.compile("%}")
+endendtag_curly_perc = re.compile("%}")
+endendtag_curly_hash = re.compile("}}")
+endendtag_curly_four = re.compile("}}}}")
 # the HTML 5 spec, section 8.1.2.2, doesn't allow spaces between
 # </ and the tag name, so maybe this should be fixed
 endtagfind = re.compile(r"</\s*([a-zA-Z][-.a-zA-Z0-9:_]*)\s*>")
-endtempstatetagfind = re.compile(r"{%\s*end([a-zA-Z][-.a-zA-Z0-9:_]*)\s*%}", re.I)
+endtagfind_curly_perc = re.compile(r"{%\s*end([a-zA-Z][-.a-zA-Z0-9:_]*)\s*%}", re.I)
+endtagfind_curly_hash = re.compile(r"{{/([a-zA-Z][-.a-zA-Z0-9:_]*)\s*}}", re.I)
+endtagfind_curly_four = re.compile(r"{{{{/([a-zA-Z][-.a-zA-Z0-9:_]*)\s*}}}}", re.I)
 
 
 class Htp(_markupbase.ParserBase):
@@ -269,6 +337,7 @@ class Htp(_markupbase.ParserBase):
                     k = i + 1
                 else:
                     break
+
                 if k < 0:
                     if not end:
                         break
@@ -328,12 +397,13 @@ class Htp(_markupbase.ParserBase):
                 else:
                     break
             elif startswith("{%", i):
-                if starttempstatecommentopen.match(rawdata, i):
-                    k = self.parse_comment_curlyperc(i)
-                elif endtempstateopen.match(rawdata, i):
-                    k = self.parse_tempstateendtag(i)
+
+                if commentopen_curly_perc.match(rawdata, i):
+                    k = self.parse_comment_curly_perc(i)
+                elif commentclose_curly_perc.match(rawdata, i):
+                    k = self.parse_endtag_curly_perc(i)
                 elif starttempstateopen.match(rawdata, i):
-                    k = self.parse_tempstatestarttag(i)
+                    k = self.parse_starttag_curly_perc(i)
 
                 if k < 0:
                     if not end:
@@ -352,14 +422,190 @@ class Htp(_markupbase.ParserBase):
 
                 i = self.updatepos(i, k)
             elif startswith("{#", i):
-                k = self.parse_comment_curlyhash(i)
+                k = self.parse_comment_curly_hash(i)
+
+                if k < 0:
+
+                    if not end:
+                        break
+                    k = rawdata.find("#}", i + 1)
+                    if k < 0:
+                        k = rawdata.find("{#", i + 1)
+                        if k < 0:
+                            k = i + 1
+                    else:
+                        k += 1
+                    if self.convert_charrefs and not self.cdata_elem:
+                        self.handle_data(unescape(rawdata[i:k]))
+                    else:
+                        self.handle_data(rawdata[i:k])
+
                 i = self.updatepos(i, k)
             elif startswith("{{!", i):
                 # {{! }} or {{!-- }}
-                k = self.parse_comment_curlycurlyexlaim(i)
+                k = self.parse_comment_curly_exlaim(i)
+                if k < 0:
+
+                    if not end:
+                        break
+                    k = rawdata.find("}}", i + 1)
+                    if k < 0:
+                        k = rawdata.find("{{!", i + 1)
+                        if k < 0:
+                            k = i + 1
+                    else:
+                        k += 1
+                    if self.convert_charrefs and not self.cdata_elem:
+                        self.handle_data(unescape(rawdata[i:k]))
+                    else:
+                        self.handle_data(rawdata[i:k])
+
                 i = self.updatepos(i, k)
             elif startswith("@*", i):
-                k = self.parse_comment_atstar(i)
+                k = self.parse_comment_at_star(i)
+
+                if k < 0:
+
+                    if not end:
+                        break
+                    k = rawdata.find("*@", i + 1)
+                    if k < 0:
+                        k = rawdata.find("@*", i + 1)
+                        if k < 0:
+                            k = i + 1
+                    else:
+                        k += 1
+                    if self.convert_charrefs and not self.cdata_elem:
+                        self.handle_data(unescape(rawdata[i:k]))
+                    else:
+                        self.handle_data(rawdata[i:k])
+
+                i = self.updatepos(i, k)
+
+            elif startswith("{{#", i):
+                # {{# }}
+                k = self.parse_starttag_curly_hash(i)
+
+                if k < 0:
+
+                    if not end:
+                        break
+                    k = rawdata.find("}}}}", i + 1)
+                    if k < 0:
+                        k = rawdata.find("{{#", i + 1)
+                        if k < 0:
+                            k = i + 1
+                    else:
+                        k += 1
+                    if self.convert_charrefs and not self.cdata_elem:
+                        self.handle_data(unescape(rawdata[i:k]))
+                    else:
+                        self.handle_data(rawdata[i:k])
+
+                i = self.updatepos(i, k)
+
+            elif startswith("{{/", i):
+                # {{/ }}
+                k = self.parse_endtag_curly_hash(i)
+                if k < 0:
+
+                    if not end:
+                        break
+                    k = rawdata.find("}}", i + 1)
+                    if k < 0:
+                        k = rawdata.find("{{/", i + 1)
+                        if k < 0:
+                            k = i + 1
+                    else:
+                        k += 1
+                    if self.convert_charrefs and not self.cdata_elem:
+                        self.handle_data(unescape(rawdata[i:k]))
+                    else:
+                        self.handle_data(rawdata[i:k])
+
+                i = self.updatepos(i, k)
+
+            elif startswith("{{{{/", i):
+                # {{{{/ }}}} handlebars raw block
+                k = self.parse_endtag_curly_four(i)
+
+                if k < 0:
+
+                    if not end:
+                        break
+                    k = rawdata.find("}}}}", i + 1)
+                    if k < 0:
+                        k = rawdata.find("{{{{/", i + 1)
+                        if k < 0:
+                            k = i + 1
+                    else:
+                        k += 1
+                    if self.convert_charrefs and not self.cdata_elem:
+                        self.handle_data(unescape(rawdata[i:k]))
+                    else:
+                        self.handle_data(rawdata[i:k])
+
+                i = self.updatepos(i, k)
+
+            elif startswith("{{{{", i):
+                # {{{{ }}}} handlebars raw block
+                k = self.parse_starttag_curly_four(i)
+
+                if k < 0:
+
+                    if not end:
+                        break
+                    k = rawdata.find("}}}}", i + 1)
+                    if k < 0:
+                        k = rawdata.find("{{{{", i + 1)
+                        if k < 0:
+                            k = i + 1
+                    else:
+                        k += 1
+                    if self.convert_charrefs and not self.cdata_elem:
+                        self.handle_data(unescape(rawdata[i:k]))
+                    else:
+                        self.handle_data(rawdata[i:k])
+
+                i = self.updatepos(i, k)
+
+            elif startswith("{{", i):
+                # {{ stuff ... }}
+                k = self.parse_curly(i)
+
+                if k < 0:
+
+                    if not end:
+                        break
+                    k = rawdata.find("}}", i + 1)
+                    if k < 0:
+                        k = rawdata.find("{{", i + 1)
+                        if k < 0:
+                            k = i + 1
+                    else:
+                        k += 1
+                    if self.convert_charrefs and not self.cdata_elem:
+                        self.handle_data(unescape(rawdata[i:k]))
+                    else:
+                        self.handle_data(rawdata[i:k])
+
+                i = self.updatepos(i, k)
+
+            # need to handle any { statements here
+            elif startswith("{", i):
+                next_curly = re.search(r"<|{|@", rawdata[i + 1 :])
+                k = next_curly.start() + i if next_curly else -1
+
+                if k < 0:
+                    k = i + 1
+                else:
+                    k += 1
+
+                if self.convert_charrefs and not self.cdata_elem:
+                    self.handle_data(unescape(rawdata[i:k]))
+                else:
+                    self.handle_data(rawdata[i:k])
+
                 i = self.updatepos(i, k)
 
             else:
@@ -372,44 +618,6 @@ class Htp(_markupbase.ParserBase):
                 self.handle_data(rawdata[i:n])
             i = self.updatepos(i, n)
         self.rawdata = rawdata[i:]
-
-    # Internal -- parse endtag, return end or -1 if incomplete
-    def parse_tempstateendtag(self, i):
-        rawdata = self.rawdata
-        assert rawdata[i : i + 2] == "{%", "unexpected call to parse_endtag"
-        match = endtempstateendtag.search(rawdata, i + 2)  # %}
-        if not match:
-            return -1
-        gtpos = match.end()
-        match = endtempstatetagfind.match(rawdata, i)  # </ + tag + >
-        if not match:
-            if self.cdata_elem is not None:
-                self.handle_data(rawdata[i:gtpos])
-                return gtpos
-            # find the name: w3.org/TR/html5/tokenization.html#tag-name-state
-            namematch = tempstatetagfind_tolerant.match(rawdata, i + 2)
-            if not namematch:
-                # w3.org/TR/html5/tokenization.html#end-tag-open-state
-                if rawdata[i : i + 3] == "</>":
-                    return i + 3
-                else:
-                    return self.parse_bogus_comment(i)
-            tagname = namematch.group(1).lower()
-            # consume and ignore other stuff between the name and the >
-            # Note: this is not 100% correct, since we might have things like
-            # </tag attr=">">, but looking for > after the name should cover
-            # most of the cases and is much simpler
-            gtpos = rawdata.find("%}", namematch.end())
-            self.handle_tempstateendtag(tagname)
-            return gtpos + 1
-        elem = match.group(1).lower()  # script or style
-        if self.cdata_elem is not None:
-            if elem != self.cdata_elem:
-                self.handle_data(rawdata[i:gtpos])
-                return gtpos
-        self.handle_tempstateendtag(elem)
-        self.clear_cdata_mode()
-        return gtpos
 
     # Internal -- parse html declarations, return length or -1 if not terminated
     # See w3.org/TR/html5/tokenization.html#markup-declaration-open-state
@@ -513,9 +721,9 @@ class Htp(_markupbase.ParserBase):
 
         # Internal -- handle starttag, return end or -1 if not terminated
 
-    def parse_tempstatestarttag(self, i):
+    def parse_starttag_curly_perc(self, i):
         self.__starttag_text = None
-        endpos = self.check_for_whole_temp_state_start_tag(i)
+        endpos = self.check_for_whole_start_tag_curly_perc(i)
 
         if endpos < 0:
             return endpos
@@ -524,15 +732,15 @@ class Htp(_markupbase.ParserBase):
 
         # Now parse the data between i+1 and j into a tag and attrs
         attrs = []
-        match = tempstatetagfind_tolerant.match(
+        match = tagfind_tolerant_curly_perc.match(
             rawdata, i + 2
         )  # start tag is 2 chars wide
-        assert match, "unexpected call to parse_tempstatestarttag()"
+        assert match, "unexpected call to parse_starttag_curly_perc()"
         k = match.end()
 
         self.lasttag = tag = match.group(1).lower()
         while k < endpos:
-            m = tempstateattrfind_tolerant.match(rawdata, k)
+            m = attrfind_tolerant_curly_perc.match(rawdata, k)
             if not m:
                 break
 
@@ -554,9 +762,162 @@ class Htp(_markupbase.ParserBase):
         # statement tags are not else ending.
         # if end.endswith('%}'):
         #     # XHTML-style empty tag: <span attr="value" />
-        #     self.handle_tempstatestartendtag(tag, attrs)
+        #     self.handle_startendtag_curly_perc(tag, attrs)
         # else:
-        self.handle_tempstatestarttag(tag.strip(), attrs)
+        self.handle_starttag_curly_perc(tag.strip(), attrs)
+        if tag in self.CDATA_CONTENT_ELEMENTS:
+            self.set_cdata_mode(tag)
+        return endpos
+
+    def parse_starttag_curly_hash(self, i):
+        self.__starttag_text = None
+        endpos = self.check_for_whole_start_tag_curly_hash(i)
+
+        if endpos < 0:
+            return endpos
+        rawdata = self.rawdata
+        self.__starttag_text = rawdata[i:endpos]
+
+        # Now parse the data between i+1 and j into a tag and attrs
+        attrs = []
+        match = tagfind_tolerant_curly_hash.match(
+            rawdata, i + 3
+        )  # start tag is 3 chars wide
+        assert match, "unexpected call to parse_starttag_curly_hash()"
+        k = match.end()
+
+        self.lasttag = tag = match.group(1).lower()
+
+        while k < endpos:
+            m = attrfind_tolerant_curly_hash.match(rawdata, k)
+
+            if not m:
+                break
+
+            attr = m.group(1)
+
+            attrs.append(attr)
+            k = m.end()
+
+        end = rawdata[k:endpos].strip()
+
+        if end != "}}":
+            lineno, offset = self.getpos()
+            if "\n" in self.__starttag_text:
+                lineno = lineno + self.__starttag_text.count("\n")
+                offset = len(self.__starttag_text) - self.__starttag_text.rfind("\n")
+            else:
+                offset = offset + len(self.__starttag_text)
+            self.handle_data(rawdata[i:endpos])
+            return endpos
+        # statement tags are not else ending.
+        # if end.endswith('%}'):
+        #     # XHTML-style empty tag: <span attr="value" />
+        #     self.handle_startendtag_curly_perc(tag, attrs)
+        # else:
+        self.handle_starttag_curly_hash(tag.strip(), attrs)
+        if tag in self.CDATA_CONTENT_ELEMENTS:
+            self.set_cdata_mode(tag)
+        return endpos
+
+    def parse_starttag_curly_four(self, i):
+        self.__starttag_text = None
+        endpos = self.check_for_whole_start_tag_curly_four(i)
+
+        if endpos < 0:
+            return endpos
+        rawdata = self.rawdata
+        self.__starttag_text = rawdata[i:endpos]
+
+        # Now parse the data between i+1 and j into a tag and attrs
+        attrs = []
+        match = tagfind_tolerant_curly_four.match(
+            rawdata, i + 4
+        )  # start tag is 4 chars wide
+        assert match, "unexpected call to parse_starttag_curly_four()"
+        k = match.end()
+
+        self.lasttag = tag = match.group(1).lower()
+
+        while k < endpos:
+            m = attrfind_tolerant_curly_four.match(rawdata, k)
+
+            if not m:
+                break
+
+            attr = m.group(1)
+
+            attrs.append(attr)
+            k = m.end()
+
+        end = rawdata[k:endpos].strip()
+
+        if end != "}}}}":
+            lineno, offset = self.getpos()
+            if "\n" in self.__starttag_text:
+                lineno = lineno + self.__starttag_text.count("\n")
+                offset = len(self.__starttag_text) - self.__starttag_text.rfind("\n")
+            else:
+                offset = offset + len(self.__starttag_text)
+            self.handle_data(rawdata[i:endpos])
+            return endpos
+        # statement tags are not else ending.
+        # if end.endswith('%}'):
+        #     # XHTML-style empty tag: <span attr="value" />
+        #     self.handle_startendtag_curly_perc(tag, attrs)
+        # else:
+        self.handle_starttag_curly_four(tag.strip(), attrs)
+        if tag in self.CDATA_CONTENT_ELEMENTS:
+            self.set_cdata_mode(tag)
+        return endpos
+
+    def parse_curly(self, i):
+        self.__starttag_text = None
+        endpos = self.check_for_tag_curly(i)
+        if endpos < 0:
+            return endpos
+        rawdata = self.rawdata
+        self.__starttag_text = rawdata[i:endpos]
+
+        # Now parse the data between i+1 and j into a tag and attrs
+        attrs = []
+        match = tagfind_tolerant_curly.match(
+            rawdata, i + 2
+        )  # start tag is 2 chars wide
+
+        assert match, "unexpected call to parse_curly()"
+        k = match.end()
+
+        self.lasttag = tag = match.group(1).lower()
+
+        while k < endpos:
+            m = attrfind_tolerant_curly.match(rawdata, k)
+
+            if not m:
+                break
+
+            attr = m.group(1)
+
+            attrs.append(attr)
+            k = m.end()
+
+        end = rawdata[k:endpos].strip()
+
+        if end != "}}":
+            lineno, offset = self.getpos()
+            if "\n" in self.__starttag_text:
+                lineno = lineno + self.__starttag_text.count("\n")
+                offset = len(self.__starttag_text) - self.__starttag_text.rfind("\n")
+            else:
+                offset = offset + len(self.__starttag_text)
+            self.handle_data(rawdata[i:endpos])
+            return endpos
+        # statement tags are not else ending.
+        # if end.endswith('%}'):
+        #     # XHTML-style empty tag: <span attr="value" />
+        #     self.handle_startendtag_curly_perc(tag, attrs)
+        # else:
+        self.handle_curly(tag.strip(), attrs)
         if tag in self.CDATA_CONTENT_ELEMENTS:
             self.set_cdata_mode(tag)
         return endpos
@@ -607,10 +968,10 @@ class Htp(_markupbase.ParserBase):
                 return i + 1
         raise AssertionError("we should not get here!")
 
-    def check_for_whole_temp_state_start_tag(self, i):
+    def check_for_whole_start_tag_curly_perc(self, i):
         rawdata = self.rawdata
 
-        m = locatestarttempstateend_tolerant.match(rawdata, i)
+        m = locatestartend_tolerant_curly_perc.match(rawdata, i)
 
         if m:
             j = m.end()
@@ -622,6 +983,89 @@ class Htp(_markupbase.ParserBase):
                 if rawdata.startswith("%", j):
                     # buffer boundary
                     return -1
+            if next == "":
+                # end of input
+                return -1
+            if next in ("abcdefghijklmnopqrstuvwxyz=/" "ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+                # end of input in or before attribute value, or we have the
+                # '/' from a '/>' ending
+                return -1
+            if j > i:
+                return j
+            else:
+                return i + 1
+        raise AssertionError("we should not get here!")
+
+    def check_for_whole_start_tag_curly_hash(self, i):
+        rawdata = self.rawdata
+
+        m = locatestartend_tolerant_curly_hash.match(rawdata, i)
+
+        if m:
+            j = m.end()
+            next = rawdata[j : j + 1]
+
+            if next == "}":
+                if rawdata.startswith("}}", j):
+                    return j + 2
+                # if rawdata.startswith("%", j):
+                #     # buffer boundary
+                #     return -1
+            if next == "":
+                # end of input
+                return -1
+            if next in ("abcdefghijklmnopqrstuvwxyz=/" "ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+                # end of input in or before attribute value, or we have the
+                # '/' from a '/>' ending
+                return -1
+            if j > i:
+                return j
+            else:
+                return i + 1
+        raise AssertionError("we should not get here!")
+
+    def check_for_whole_start_tag_curly_four(self, i):
+        rawdata = self.rawdata
+
+        m = locatestartend_tolerant_curly_four.match(rawdata, i)
+
+        if m:
+            j = m.end()
+            next = rawdata[j : j + 1]
+
+            if next == "}":
+                if rawdata.startswith("}}}}", j):
+                    return j + 4
+                # if rawdata.startswith("%", j):
+                #     # buffer boundary
+                #     return -1
+            if next == "":
+                # end of input
+                return -1
+            if next in ("abcdefghijklmnopqrstuvwxyz=/" "ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+                # end of input in or before attribute value, or we have the
+                # '/' from a '/>' ending
+                return -1
+            if j > i:
+                return j
+            else:
+                return i + 1
+        raise AssertionError("we should not get here!")
+
+    def check_for_tag_curly(self, i):
+        rawdata = self.rawdata
+
+        m = locate_tolerant_curly.match(rawdata, i)
+        if m:
+            j = m.end()
+            next = rawdata[j : j + 1]
+
+            if next == "}":
+                if rawdata.startswith("}}", j):
+                    return j + 2
+                # if rawdata.startswith("%", j):
+                #     # buffer boundary
+                #     return -1
             if next == "":
                 # end of input
                 return -1
@@ -672,6 +1116,122 @@ class Htp(_markupbase.ParserBase):
                 return gtpos
 
         self.handle_endtag(elem)
+        self.clear_cdata_mode()
+        return gtpos
+
+    # Internal -- parse endtag, return end or -1 if incomplete
+    def parse_endtag_curly_perc(self, i):
+        rawdata = self.rawdata
+        assert rawdata[i : i + 2] == "{%", "unexpected call to parse_endtag"
+        match = endendtag_curly_perc.search(rawdata, i + 2)  # %}
+        if not match:
+            return -1
+        gtpos = match.end()
+        match = endtagfind_curly_perc.match(rawdata, i)  # </ + tag + >
+        if not match:
+            if self.cdata_elem is not None:
+                self.handle_data(rawdata[i:gtpos])
+                return gtpos
+            # find the name: w3.org/TR/html5/tokenization.html#tag-name-state
+            namematch = tagfind_tolerant_curly_perc.match(rawdata, i + 2)
+            if not namematch:
+                # w3.org/TR/html5/tokenization.html#end-tag-open-state
+                if rawdata[i : i + 3] == "</>":
+                    return i + 3
+                else:
+                    return self.parse_bogus_comment(i)
+            tagname = namematch.group(1).lower()
+            # consume and ignore other stuff between the name and the >
+            # Note: this is not 100% correct, since we might have things like
+            # </tag attr=">">, but looking for > after the name should cover
+            # most of the cases and is much simpler
+            gtpos = rawdata.find("%}", namematch.end())
+            self.handle_endtag_curly_perc(tagname)
+            return gtpos + 1
+        elem = match.group(1).lower()  # script or style
+        if self.cdata_elem is not None:
+            if elem != self.cdata_elem:
+                self.handle_data(rawdata[i:gtpos])
+                return gtpos
+        self.handle_endtag_curly_perc(elem)
+        self.clear_cdata_mode()
+        return gtpos
+
+    def parse_endtag_curly_hash(self, i):
+        rawdata = self.rawdata
+        assert rawdata[i : i + 3] == "{{/", "unexpected call to parse_endtag_curly_hash"
+        match = endendtag_curly_hash.search(rawdata, i + 2)  # }}
+        if not match:
+            return -1
+        gtpos = match.end()
+        match = endtagfind_curly_hash.match(rawdata, i)  # </ + tag + >
+        if not match:
+            if self.cdata_elem is not None:
+                self.handle_data(rawdata[i:gtpos])
+                return gtpos
+            # find the name: w3.org/TR/html5/tokenization.html#tag-name-state
+            namematch = tagfind_tolerant_curly_hash.match(rawdata, i + 2)
+            if not namematch:
+                # w3.org/TR/html5/tokenization.html#end-tag-open-state
+                if rawdata[i : i + 3] == "</>":
+                    return i + 3
+                else:
+                    return self.parse_bogus_comment(i)
+            tagname = namematch.group(1).lower()
+            # consume and ignore other stuff between the name and the >
+            # Note: this is not 100% correct, since we might have things like
+            # </tag attr=">">, but looking for > after the name should cover
+            # most of the cases and is much simpler
+            gtpos = rawdata.find("%}", namematch.end())
+            self.handle_endtag_curly_hash(tagname)
+            return gtpos + 1
+        elem = match.group(1).lower()  # script or style
+        if self.cdata_elem is not None:
+            if elem != self.cdata_elem:
+                self.handle_data(rawdata[i:gtpos])
+                return gtpos
+        self.handle_endtag_curly_hash(elem)
+        self.clear_cdata_mode()
+        return gtpos
+
+    def parse_endtag_curly_four(self, i):
+        rawdata = self.rawdata
+        assert (
+            rawdata[i : i + 5] == "{{{{/"
+        ), "unexpected call to parse_endtag_curly_four"
+
+        match = endendtag_curly_four.search(rawdata, i + 5)  # }}}}
+
+        if not match:
+            return -1
+        gtpos = match.end()
+        match = endtagfind_curly_four.match(rawdata, i)  # </ + tag + >
+        if not match:
+            if self.cdata_elem is not None:
+                self.handle_data(rawdata[i:gtpos])
+                return gtpos
+            # find the name: w3.org/TR/html5/tokenization.html#tag-name-state
+            namematch = tagfind_tolerant_curly_four.match(rawdata, i + 4)
+            if not namematch:
+                # w3.org/TR/html5/tokenization.html#end-tag-open-state
+                if rawdata[i : i + 3] == "</>":
+                    return i + 3
+                else:
+                    return self.parse_bogus_comment(i)
+            tagname = namematch.group(1).lower()
+            # consume and ignore other stuff between the name and the >
+            # Note: this is not 100% correct, since we might have things like
+            # </tag attr=">">, but looking for > after the name should cover
+            # most of the cases and is much simpler
+            gtpos = rawdata.find("}}}}", namematch.end())
+            self.handle_endtag_curly_four(tagname)
+            return gtpos + 1
+        elem = match.group(1).lower()  # script or style
+        if self.cdata_elem is not None:
+            if elem != self.cdata_elem:
+                self.handle_data(rawdata[i:gtpos])
+                return gtpos
+        self.handle_endtag_curly_four(elem)
         self.clear_cdata_mode()
         return gtpos
 
@@ -796,11 +1356,11 @@ class Htp(_markupbase.ParserBase):
         return match.end(0)
 
     # Internal -- parse comment {% comment ... %}{% end comment %}, return length or -1 if not terminated
-    def parse_comment_curlyperc(self, i, report=1):
+    def parse_comment_curly_perc(self, i, report=1):
         rawdata = self.rawdata
-        start = starttempstatecommentopen.match(rawdata, i)
+        start = commentopen_curly_perc.match(rawdata, i)
         if not start:
-            raise AssertionError("unexpected call to parse_comment_curlyhash()")
+            raise AssertionError("unexpected call to parse_comment_curly_hash()")
         match = _commentclosecurlyperc.search(rawdata, i + 2)
         if not match:
             return -1
@@ -810,10 +1370,10 @@ class Htp(_markupbase.ParserBase):
         return match.end(0)
 
     # Internal -- parse comment {# #}, return length or -1 if not terminated
-    def parse_comment_curlyhash(self, i, report=1):
+    def parse_comment_curly_hash(self, i, report=1):
         rawdata = self.rawdata
         if rawdata[i : i + 2] != "{#":
-            raise AssertionError("unexpected call to parse_comment_curlyhash()")
+            raise AssertionError("unexpected call to parse_comment_curly_hash()")
         match = _commentclosecurlyhash.search(rawdata, i + 2)
         if not match:
             return -1
@@ -823,10 +1383,10 @@ class Htp(_markupbase.ParserBase):
         return match.end(0)
 
     # Internal -- parse comment {{! }} or {{!-- }}, return length or -1 if not terminated
-    def parse_comment_curlycurlyexlaim(self, i, report=1):
+    def parse_comment_curly_exlaim(self, i, report=1):
         rawdata = self.rawdata
         if rawdata[i : i + 3] != "{{!":
-            raise AssertionError("unexpected call to parse_comment_curlycurlyexlaim()")
+            raise AssertionError("unexpected call to parse_comment_curly_exlaim()")
         match = _commentclosecurlycurlyexlaim.search(rawdata, i + 2)
         if not match:
             return -1
@@ -839,10 +1399,10 @@ class Htp(_markupbase.ParserBase):
         return match.end(0)
 
     # Internal -- parse comment @* *@ , return length or -1 if not terminated
-    def parse_comment_atstar(self, i, report=1):
+    def parse_comment_at_star(self, i, report=1):
         rawdata = self.rawdata
         if rawdata[i : i + 2] != "@*":
-            raise AssertionError("unexpected call to parse_comment_atstar()")
+            raise AssertionError("unexpected call to parse_comment_at_star()")
         match = _commentcloseatstar.search(rawdata, i + 2)
         if not match:
             return -1
@@ -1070,74 +1630,89 @@ class Htp(_markupbase.ParserBase):
 
     # To be overridden -- handlers for unknown objects
     def unknown_decl(self, data):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- finish processing of start+end tag: <tag.../>
     def handle_startendtag(self, tag, attrs):
         self.handle_starttag(tag, attrs)
         self.handle_endtag(tag)
 
-    # Overridable -- finish processing of start+end tag: <tag.../>
-    def handle_tempstatestartendtag(self, tag, attrs):
-        self.handle_tempstatestarttag(tag, attrs)
-        self.handle_tempstateendtag(tag)
-
     # Overridable -- handle start tag
     def handle_starttag(self, tag, attrs):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle template statement start tag
-    def handle_tempstatestarttag(self, tag, attrs):
-        pass
+    def handle_starttag_curly_perc(self, tag, attrs):
+        pass  # pragma: no cover
+
+    # Overridable -- handle template statement start tag
+    def handle_starttag_curly_hash(self, tag, attrs):
+        pass  # pragma: no cover
+
+    # Overridable -- handle template statement start tag
+    def handle_starttag_curly_four(self, tag, attrs):
+        pass  # pragma: no cover
 
     # Overridable -- handle end tag
     def handle_endtag(self, tag):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle template statement end tag
-    def handle_tempstateendtag(self, tag):
-        pass
+    def handle_endtag_curly_perc(self, tag):
+        pass  # pragma: no cover
+
+    # Overridable -- handle template statement end tag
+    def handle_endtag_curly_hash(self, tag):
+        pass  # pragma: no cover
+
+    # Overridable -- handle template statement end tag
+    def handle_endtag_curly_four(self, tag):
+        pass  # pragma: no cover
 
     # Overridable -- handle character reference
     def handle_charref(self, name):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle entity reference
     def handle_entityref(self, name):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle data
     def handle_data(self, data):
-        pass
+        pass  # pragma: no cover
+
+    # Overridable -- handle data
+    def handle_curly(self, data, attrs):
+        pass  # pragma: no cover
 
     # Overridable -- handle comment <!-- -->
     def handle_comment(self, data):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle comment {# #}
     def handle_comment_curly_hash(self, data):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle comment {% comment ... %}{%endcomment%}
     def handle_comment_curly_perc(self, data, attrs):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle comment {{! }}
     def handle_comment_curly_exlaim(self, data):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle comment {{!-- }}
     def handle_comment_curly_exlaim_dash(self, data):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle comment @* *@
     def handle_comment_at_star(self, data):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle declaration
     def handle_decl(self, decl):
-        pass
+        pass  # pragma: no cover
 
     # Overridable -- handle processing instruction
     def handle_pi(self, data):
-        pass
+        pass  # pragma: no cover

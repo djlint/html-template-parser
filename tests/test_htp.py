@@ -42,11 +42,29 @@ class EventCollector(Htp):
     def handle_starttag(self, tag, attrs):
         self.append(("starttag", tag, attrs))
 
+    def handle_starttag_curly_perc(self, tag, attrs):
+        self.append(("starttag_curly_perc", tag, attrs))
+
+    def handle_starttag_curly_hash(self, tag, attrs):
+        self.append(("starttag_curly_hash", tag, attrs))
+
+    def handle_starttag_curly_four(self, tag, attrs):
+        self.append(("starttag_curly_four", tag, attrs))
+
     def handle_startendtag(self, tag, attrs):
         self.append(("startendtag", tag, attrs))
 
     def handle_endtag(self, tag):
         self.append(("endtag", tag))
+
+    def handle_endtag_curly_perc(self, tag):
+        self.append(("endtag_curly_perc", tag))
+
+    def handle_endtag_curly_hash(self, tag):
+        self.append(("endtag_curly_hash", tag))
+
+    def handle_endtag_curly_four(self, tag):
+        self.append(("endtag_curly_four", tag))
 
     # all other markup
 
@@ -54,19 +72,19 @@ class EventCollector(Htp):
         self.append(("comment", data))
 
     def handle_comment_curly_hash(self, data):
-        self.append(("comment", data))
+        self.append(("comment_curly_hash", data))
 
     def handle_comment_curly_exlaim(self, data):
-        self.append(("comment", data))
+        self.append(("comment_curly_exlaim", data))
 
     def handle_comment_curly_exlaim_dash(self, data):
-        self.append(("comment", data))
+        self.append(("comment_curly_exlaim_dash", data))
 
     def handle_comment_at_star(self, data):
-        self.append(("comment", data))
+        self.append(("comment_at_star", data))
 
     def handle_comment_curly_perc(self, data, attrs):
-        self.append(("comment", data, attrs))
+        self.append(("comment_curly_perc", data, attrs))
 
     def handle_charref(self, data):
         self.append(("charref", data))
@@ -443,14 +461,59 @@ text
             ("comment", "--I have many hyphens--"),
             ("comment", " I have a > in the middle "),
             ("comment", " and I have -- in the middle! "),
-            ("comment", " comment "),
-            ("comment", " something?", None),
-            ("comment", "no", "asdf"),
-            ("comment", " handlebars are cool "),
-            ("comment", " even better "),
-            ("comment", " razor "),
+            ("comment_curly_hash", " comment "),
+            ("comment_curly_perc", " something?", None),
+            ("comment_curly_perc", "no", "asdf"),
+            ("comment_curly_exlaim", " handlebars are cool "),
+            ("comment_curly_exlaim_dash", " even better "),
+            ("comment_at_star", " razor "),
         ]
 
+        self._run_check(html, expected)
+
+    def test_tag_curly_perc_if(self):
+        html = "{% if this %}{% endif %}"
+        expected = [
+            ("starttag_curly_perc", "if", ["this"]),
+            ("endtag_curly_perc", "if"),
+        ]
+        self._run_check(html, expected)
+
+    def test_tag_curly_perc_if_else(self):
+        html = "{% if this %}{%else %}{% endif %}"
+        expected = [
+            ("starttag_curly_perc", "if", ["this"]),
+            ("starttag_curly_perc", "else", []),
+            ("endtag_curly_perc", "if"),
+        ]
+        self._run_check(html, expected)
+
+    def test_tag_curly_perc_for(self):
+        html = "{% for x in range(0,10) %}{% endfor %}"
+        expected = [
+            ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"]),
+            ("endtag_curly_perc", "for"),
+        ]
+        self._run_check(html, expected)
+
+        html = "{% for x in range(0,10) %}{{ x | length }}{% endfor %}"
+        expected = [
+            ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"]),
+            ("endtag_curly_perc", "for"),
+        ]
+        self._run_check(html, expected)
+
+    def test_broken_curly(self):
+        html = "{{ asdf}"
+        expected = [
+            ("data", "{{ asdf}"),
+        ]
+        self._run_check(html, expected)
+
+        html = "{ asdf}}"
+        expected = [
+            ("data", "{ asdf}}"),
+        ]
         self._run_check(html, expected)
 
     def test_condcoms(self):
