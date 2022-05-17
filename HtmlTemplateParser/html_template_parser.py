@@ -43,9 +43,10 @@ entityref = re.compile("&([a-zA-Z][-.a-zA-Z0-9]*)[^a-zA-Z0-9]")
 charref = re.compile("&#(?:[0-9]+|[xX][0-9a-fA-F]+)[^0-9a-fA-F]")
 
 starttagopen = re.compile("<[a-zA-Z]")
-starttempstateopen = re.compile(r"{%")
+starttagopen_curly_perc = re.compile(r"{%")
 commentopen_curly_perc = re.compile(r"{%\s*comment\s*(?:('|\")(.*?)\1)?\s*%}", re.I)
-commentclose_curly_perc = re.compile(r"{%\s*end", re.I)
+commentclose_curly_perc = re.compile(r"{%\s*endcomment", re.I)
+endtag_curly_perc = re.compile(r"{%-?\s*end", re.I)
 piclose = re.compile(">")
 commentclose = re.compile(r"--\s*>")
 # Note:
@@ -56,8 +57,12 @@ commentclose = re.compile(r"--\s*>")
 # and http://www.w3.org/TR/html5/tokenization.html#tag-name-state
 tagfind_tolerant = re.compile(r"([a-zA-Z][^\t\n\r\f />\x00]*)(?:\s|/(?!>))*")
 tagfind_tolerant_curly_perc = re.compile(
-    r"(\s*[a-zA-Z](?:(?!%}|\t|\n|\r|\f| |\x00).)*)(?:\s|/(?!%}))*"
+    r"-?(\s*[a-zA-Z](?:(?!-?%}|\t|\n|\r|\f| |\x00).)*)(?:\s|/(?!-?%}))*"
 )
+tagfind_tolerant_curly_perc_end = re.compile(
+    r"-?\s*end([a-zA-Z](?:(?!-?%}|\t|\n|\r|\f| |\x00).)*)(?:\s|/(?!-?%}))*"
+)
+
 tagfind_tolerant_curly_hash = re.compile(
     r"(\s*[a-zA-Z](?:(?!}}|\t|\n|\r|\f| |\x00).)*)(?:\s|/(?!}}))*"
 )
@@ -71,7 +76,7 @@ tagfind_tolerant_curly = re.compile(
 )
 
 attrfind_tolerant_curly_perc = re.compile(
-    r'((?<=[\'"\s/])(?:(?!%}|\s|/).)(?:(?!%}|\s|/|=).)*)(\s*=+\s*(\'[^\']*\'|"[^"]*"|(?![\'"])(?:(?!%}|\s).)*))?(?:\s|/(?!%}))*'
+    r'((?<=[\'"\s/])(?:(?!-?%}|\s|/).)(?:(?!-?%}|\s|/|=).)*)(\s*=+\s*(\'[^\']*\'|"[^"]*"|(?![\'"])(?:(?!-?%}|\s).)*))?(?:\s|/(?!-?%}))*'
 )
 attrfind_tolerant_curly_hash = re.compile(
     r'((?<=[\'"\s/])(?:(?!}}|\s|/).)(?:(?!}}|\s|/|=).)*)(\s*=+\s*(\'[^\']*\'|"[^"]*"|(?![\'"])(?:(?!}}|\s).)*))?(?:\s|/(?!}}))*'
@@ -110,11 +115,11 @@ locatestarttagend_tolerant = re.compile(
 
 locatestartend_tolerant_curly_perc = re.compile(
     r"""
-  {%[\s/]*[a-zA-Z](?:(?!%}|\t|\n|\r|\f| |\x00).)*       # tag name
+  {%-?[\s/]*[a-zA-Z](?:(?!-?%}|\t|\n|\r|\f| |\x00).)*       # tag name
   (?:[\s/]*                                             # optional whitespace before attribute name
     (?:'[^']*'                   # LITA-enclosed value
       |"[^"]*"                   # LIT-enclosed value
-      |(?!['"])(?:(?!%}|\s).)*       # bare value
+      |(?!['"])(?:(?!-?%}|\s).)*       # bare value
     )*
   )*
   \s*                                # trailing whitespace
@@ -177,7 +182,7 @@ locatestarttempend_tolerant = re.compile(
 
 
 endendtag = re.compile(">")
-endendtag_curly_perc = re.compile("%}")
+endendtag_curly_perc = re.compile("-?%}")
 endendtag_curly_hash = re.compile("}}")
 endendtag_curly_four = re.compile("}}}}")
 # the HTML 5 spec, section 8.1.2.2, doesn't allow spaces between
@@ -398,11 +403,14 @@ class Htp(_markupbase.ParserBase):
                     break
             elif startswith("{%", i):
 
-                if commentopen_curly_perc.match(rawdata, i):
-                    k = self.parse_comment_curly_perc(i)
-                elif commentclose_curly_perc.match(rawdata, i):
+                # if commentopen_curly_perc.match(rawdata, i):
+                #     print("comment start")
+                #     k = self.parse_comment_curly_perc(i)
+                # if commentclose_curly_perc.match(rawdata, i):
+                #     k = self.parse_endtag_comment_curly_perc(i)
+                if endtag_curly_perc.match(rawdata, i):
                     k = self.parse_endtag_curly_perc(i)
-                elif starttempstateopen.match(rawdata, i):
+                elif starttagopen_curly_perc.match(rawdata, i):
                     k = self.parse_starttag_curly_perc(i)
 
                 if k < 0:
@@ -719,22 +727,30 @@ class Htp(_markupbase.ParserBase):
                 self.set_cdata_mode(tag)
         return endpos
 
-        # Internal -- handle starttag, return end or -1 if not terminated
-
+    # Internal -- handle starttag, return end or -1 if not terminated
     def parse_starttag_curly_perc(self, i):
         self.__starttag_text = None
         endpos = self.check_for_whole_start_tag_curly_perc(i)
-
+        props = []
         if endpos < 0:
             return endpos
         rawdata = self.rawdata
         self.__starttag_text = rawdata[i:endpos]
 
+        start_width = 2
+        if self.__starttag_text.startswith("{%-"):
+            start_width = 3
+            props.append("spaceless-left")
+
+        if self.__starttag_text.endswith("-%}"):
+            props.append("spaceless-right")
+
         # Now parse the data between i+1 and j into a tag and attrs
         attrs = []
         match = tagfind_tolerant_curly_perc.match(
-            rawdata, i + 2
-        )  # start tag is 2 chars wide
+            rawdata, i + start_width
+        )  # start tag is 2 or 3 chars wide
+
         assert match, "unexpected call to parse_starttag_curly_perc()"
         k = match.end()
 
@@ -750,7 +766,8 @@ class Htp(_markupbase.ParserBase):
             k = m.end()
 
         end = rawdata[k:endpos].strip()
-        if end != "%}":
+
+        if end not in ["%}", "-%}"]:
             lineno, offset = self.getpos()
             if "\n" in self.__starttag_text:
                 lineno = lineno + self.__starttag_text.count("\n")
@@ -764,7 +781,10 @@ class Htp(_markupbase.ParserBase):
         #     # XHTML-style empty tag: <span attr="value" />
         #     self.handle_startendtag_curly_perc(tag, attrs)
         # else:
-        self.handle_starttag_curly_perc(tag.strip(), attrs)
+        if tag.strip() == "comment":
+            self.handle_comment_curly_perc(tag.strip(), attrs, props)
+        else:
+            self.handle_starttag_curly_perc(tag.strip(), attrs, props)
         if tag in self.CDATA_CONTENT_ELEMENTS:
             self.set_cdata_mode(tag)
         return endpos
@@ -943,6 +963,9 @@ class Htp(_markupbase.ParserBase):
                     return j
                 else:
                     return i + 1
+            if next == "-":
+                if rawdata.startswith("-%}", j):
+                    return j + 3
             if next == "%":
                 if rawdata.startswith("%}", j):
                     return j + 2
@@ -976,7 +999,9 @@ class Htp(_markupbase.ParserBase):
         if m:
             j = m.end()
             next = rawdata[j : j + 1]
-
+            if next == "-":
+                if rawdata.startswith("-%}", j):
+                    return j + 3
             if next == "%":
                 if rawdata.startswith("%}", j):
                     return j + 2
@@ -1122,10 +1147,24 @@ class Htp(_markupbase.ParserBase):
     # Internal -- parse endtag, return end or -1 if incomplete
     def parse_endtag_curly_perc(self, i):
         rawdata = self.rawdata
+        props = []
+
+        start_width = 2
+
+        if rawdata[i:].startswith("{%-"):
+            start_width = 3
+            props.append("spaceless-left")
+
         assert rawdata[i : i + 2] == "{%", "unexpected call to parse_endtag"
-        match = endendtag_curly_perc.search(rawdata, i + 2)  # %}
+
+        match = endendtag_curly_perc.search(rawdata, i + start_width)  # %}
+
         if not match:
             return -1
+
+        if rawdata[i:].endswith("-%}"):
+            props.append("spaceless-right")
+
         gtpos = match.end()
         match = endtagfind_curly_perc.match(rawdata, i)  # </ + tag + >
         if not match:
@@ -1133,7 +1172,8 @@ class Htp(_markupbase.ParserBase):
                 self.handle_data(rawdata[i:gtpos])
                 return gtpos
             # find the name: w3.org/TR/html5/tokenization.html#tag-name-state
-            namematch = tagfind_tolerant_curly_perc.match(rawdata, i + 2)
+
+            namematch = tagfind_tolerant_curly_perc_end.match(rawdata, i + start_width)
             if not namematch:
                 # w3.org/TR/html5/tokenization.html#end-tag-open-state
                 if rawdata[i : i + 3] == "</>":
@@ -1141,19 +1181,31 @@ class Htp(_markupbase.ParserBase):
                 else:
                     return self.parse_bogus_comment(i)
             tagname = namematch.group(1).lower()
+
             # consume and ignore other stuff between the name and the >
             # Note: this is not 100% correct, since we might have things like
             # </tag attr=">">, but looking for > after the name should cover
             # most of the cases and is much simpler
-            gtpos = rawdata.find("%}", namematch.end())
-            self.handle_endtag_curly_perc(tagname)
+
+            find_end = endendtag_curly_perc.search(rawdata, namematch.end())
+            gtpos = find_end.end() if find_end else -1
+            # print(gtpos)
+            # gtpos = rawdata.find("%}", namematch.end())
+            # print(gtpos)
+            if tagname == "comment":
+                self.handle_comment_curly_perc_close(tagname, props)
+            else:
+                self.handle_endtag_curly_perc(tagname, props)
             return gtpos + 1
         elem = match.group(1).lower()  # script or style
         if self.cdata_elem is not None:
             if elem != self.cdata_elem:
                 self.handle_data(rawdata[i:gtpos])
                 return gtpos
-        self.handle_endtag_curly_perc(elem)
+        if elem == "comment":
+            self.handle_comment_curly_perc_close(elem, props)
+        else:
+            self.handle_endtag_curly_perc(elem, props)
         self.clear_cdata_mode()
         return gtpos
 
@@ -1356,18 +1408,19 @@ class Htp(_markupbase.ParserBase):
         return match.end(0)
 
     # Internal -- parse comment {% comment ... %}{% end comment %}, return length or -1 if not terminated
-    def parse_comment_curly_perc(self, i, report=1):
-        rawdata = self.rawdata
-        start = commentopen_curly_perc.match(rawdata, i)
-        if not start:
-            raise AssertionError("unexpected call to parse_comment_curly_hash()")
-        match = _commentclosecurlyperc.search(rawdata, i + 2)
-        if not match:
-            return -1
-        if report:
-            j = match.start(0)
-            self.handle_comment_curly_perc(rawdata[start.end(0) : j], start.group(2))
-        return match.end(0)
+    # def parse_comment_curly_perc(self, i, report=1):
+    #     rawdata = self.rawdata
+    #     start = commentopen_curly_perc.match(rawdata, i)
+    #     if not start:
+    #         raise AssertionError("unexpected call to parse_comment_curly_hash()")
+    #     match = _commentclosecurlyperc.search(rawdata, i + 2)
+    #     print(match)
+    #     if not match:
+    #         return -1
+    #     if report:
+    #         j = match.start(0)
+    #         self.handle_comment_curly_perc(rawdata[start.end(0) : j], start.group(2))
+    #     return match.end(0)
 
     # Internal -- parse comment {# #}, return length or -1 if not terminated
     def parse_comment_curly_hash(self, i, report=1):
@@ -1642,7 +1695,7 @@ class Htp(_markupbase.ParserBase):
         pass  # pragma: no cover
 
     # Overridable -- handle template statement start tag
-    def handle_starttag_curly_perc(self, tag, attrs):
+    def handle_starttag_curly_perc(self, tag, attrs, props):
         pass  # pragma: no cover
 
     # Overridable -- handle template statement start tag
@@ -1658,7 +1711,7 @@ class Htp(_markupbase.ParserBase):
         pass  # pragma: no cover
 
     # Overridable -- handle template statement end tag
-    def handle_endtag_curly_perc(self, tag):
+    def handle_endtag_curly_perc(self, tag, props):
         pass  # pragma: no cover
 
     # Overridable -- handle template statement end tag
@@ -1694,7 +1747,11 @@ class Htp(_markupbase.ParserBase):
         pass  # pragma: no cover
 
     # Overridable -- handle comment {% comment ... %}{%endcomment%}
-    def handle_comment_curly_perc(self, data, attrs):
+    def handle_comment_curly_perc(self, data, attrs, props):
+        pass  # pragma: no cover
+
+    # Overridable -- handle comment {% comment ... %}{%endcomment%}
+    def handle_comment_curly_perc_close(self, data, props):
         pass  # pragma: no cover
 
     # Overridable -- handle comment {{! }}

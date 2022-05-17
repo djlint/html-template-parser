@@ -42,8 +42,8 @@ class EventCollector(Htp):
     def handle_starttag(self, tag, attrs):
         self.append(("starttag", tag, attrs))
 
-    def handle_starttag_curly_perc(self, tag, attrs):
-        self.append(("starttag_curly_perc", tag, attrs))
+    def handle_starttag_curly_perc(self, tag, attrs, props):
+        self.append(("starttag_curly_perc", tag, attrs, props))
 
     def handle_starttag_curly_hash(self, tag, attrs):
         self.append(("starttag_curly_hash", tag, attrs))
@@ -57,8 +57,8 @@ class EventCollector(Htp):
     def handle_endtag(self, tag):
         self.append(("endtag", tag))
 
-    def handle_endtag_curly_perc(self, tag):
-        self.append(("endtag_curly_perc", tag))
+    def handle_endtag_curly_perc(self, tag, props):
+        self.append(("endtag_curly_perc", tag, props))
 
     def handle_endtag_curly_hash(self, tag):
         self.append(("endtag_curly_hash", tag))
@@ -83,8 +83,11 @@ class EventCollector(Htp):
     def handle_comment_at_star(self, data):
         self.append(("comment_at_star", data))
 
-    def handle_comment_curly_perc(self, data, attrs):
-        self.append(("comment_curly_perc", data, attrs))
+    def handle_comment_curly_perc(self, data, attrs, props):
+        self.append(("comment_curly_perc", data, attrs, props))
+
+    def handle_comment_curly_perc_close(self, data, props):
+        self.append(("comment_curly_perc_close", data, props))
 
     def handle_charref(self, data):
         self.append(("charref", data))
@@ -462,8 +465,12 @@ text
             ("comment", " I have a > in the middle "),
             ("comment", " and I have -- in the middle! "),
             ("comment_curly_hash", " comment "),
-            ("comment_curly_perc", " something?", None),
-            ("comment_curly_perc", "no", "asdf"),
+            ("comment_curly_perc", "comment", [], []),
+            ("data", " something?"),
+            ("comment_curly_perc_close", "comment", []),
+            ("comment_curly_perc", "comment", ['"asdf"'], []),
+            ("data", "no"),
+            ("comment_curly_perc_close", "comment", []),
             ("comment_curly_exlaim", " handlebars are cool "),
             ("comment_curly_exlaim_dash", " even better "),
             ("comment_at_star", " razor "),
@@ -472,34 +479,34 @@ text
         self._run_check(html, expected)
 
     def test_tag_curly_perc_if(self):
-        html = "{% if this %}{% endif %}"
+        html = "{% if this %}{% endif -%}"
         expected = [
-            ("starttag_curly_perc", "if", ["this"]),
-            ("endtag_curly_perc", "if"),
+            ("starttag_curly_perc", "if", ["this"], []),
+            ("endtag_curly_perc", "if", ["spaceless-right"]),
         ]
         self._run_check(html, expected)
 
     def test_tag_curly_perc_if_else(self):
-        html = "{% if this %}{%else %}{% endif %}"
+        html = "{%- if this %}{%else -%}{% endif %}"
         expected = [
-            ("starttag_curly_perc", "if", ["this"]),
-            ("starttag_curly_perc", "else", []),
-            ("endtag_curly_perc", "if"),
+            ("starttag_curly_perc", "if", ["this"], ["spaceless-left"]),
+            ("starttag_curly_perc", "else", [], ["spaceless-right"]),
+            ("endtag_curly_perc", "if", []),
         ]
         self._run_check(html, expected)
 
     def test_tag_curly_perc_for(self):
         html = "{% for x in range(0,10) %}{% endfor %}"
         expected = [
-            ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"]),
-            ("endtag_curly_perc", "for"),
+            ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"], []),
+            ("endtag_curly_perc", "for", []),
         ]
         self._run_check(html, expected)
 
         html = "{% for x in range(0,10) %}{{ x | length }}{% endfor %}"
         expected = [
-            ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"]),
-            ("endtag_curly_perc", "for"),
+            ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"], []),
+            ("endtag_curly_perc", "for", []),
         ]
         self._run_check(html, expected)
 

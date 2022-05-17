@@ -70,5 +70,29 @@ parser.feed('<html><head><title>Test</title></head>'
 - comment_curly_hash `{# data #}`
 - comment_curly_exlaim `{{! data }}`
 - comment_curly_exlaim_dash `{{!-- data }}`
-- comment_curly_perc `{% comment "attrs" %}data {% endcomment %}`
+- comment_curly_perc `{% comment "attrs" %}`
+- comment_curly_perc_closedata `{% endcomment %}`
 - comment_at_star `@* data *@`
+
+### Structure
+
+- startendtag `< />`
+- starttag `<`
+- starttag_curly_perc `{% ... %}`
+- starttag_curly_hash `{{#...}}`
+- starttag_curly_four `{{{{...}}}}`
+
+- endtag `<.../>`
+- endtag_curly_perc `{% end.. %}`
+- endtag_curly_hash `{{/...}}`
+- endtag_curly_four ` {{{{/...}}}}`
+
+### Data and Other
+
+- unknown_decl
+- charref
+- entityref
+- data
+- curly `{{ ... }}`
+- decl
+- pi
