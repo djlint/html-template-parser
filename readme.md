@@ -61,3 +61,14 @@ parser.feed('<html><head><title>Test</title></head>'
             '<body><h1>Parse me!</h1></body></html>')
 
 ```
+
+## 🏷 Function Naming Conventions
+
+### Comments
+
+- comment `<!-- -->`
+- comment_curly_hash `{# data #}`
+- comment_curly_exlaim `{{! data }}`
+- comment_curly_exlaim_dash `{{!-- data }}`
+- comment_curly_perc `{% comment "attrs" %}data {% endcomment %}`
+- comment_at_star `@* data *@`

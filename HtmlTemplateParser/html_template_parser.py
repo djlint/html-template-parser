@@ -806,7 +806,7 @@ class Htp(_markupbase.ParserBase):
             return -1
         if report:
             j = match.start(0)
-            self.handle_comment_curlyperc(rawdata[start.end(0) : j], start.group(2))
+            self.handle_comment_curly_perc(rawdata[start.end(0) : j], start.group(2))
         return match.end(0)
 
     # Internal -- parse comment {# #}, return length or -1 if not terminated
@@ -819,7 +819,7 @@ class Htp(_markupbase.ParserBase):
             return -1
         if report:
             j = match.start(0)
-            self.handle_comment_curlyhash(rawdata[i + 2 : j])
+            self.handle_comment_curly_hash(rawdata[i + 2 : j])
         return match.end(0)
 
     # Internal -- parse comment {{! }} or {{!-- }}, return length or -1 if not terminated
@@ -833,9 +833,9 @@ class Htp(_markupbase.ParserBase):
         if report:
             j = match.start(0)
             if rawdata[i : i + 5] == "{{!--":
-                self.handle_comment_curlycurlyexlaimdash(rawdata[i + 5 : j])
+                self.handle_comment_curly_exlaim_dash(rawdata[i + 5 : j])
             else:
-                self.handle_comment_curlycurlyexlaim(rawdata[i + 3 : j])
+                self.handle_comment_curly_exlaim(rawdata[i + 3 : j])
         return match.end(0)
 
     # Internal -- parse comment @* *@ , return length or -1 if not terminated
@@ -848,7 +848,7 @@ class Htp(_markupbase.ParserBase):
             return -1
         if report:
             j = match.start(0)
-            self.handle_comment_atstar(rawdata[i + 2 : j])
+            self.handle_comment_at_star(rawdata[i + 2 : j])
         return match.end(0)
 
     # Internal -- scan past the internal subset in a <!DOCTYPE declaration,
@@ -1115,23 +1115,23 @@ class Htp(_markupbase.ParserBase):
         pass
 
     # Overridable -- handle comment {# #}
-    def handle_comment_curlyhash(self, data):
+    def handle_comment_curly_hash(self, data):
         pass
 
     # Overridable -- handle comment {% comment ... %}{%endcomment%}
-    def handle_comment_curlyperc(self, data, attrs):
+    def handle_comment_curly_perc(self, data, attrs):
         pass
 
     # Overridable -- handle comment {{! }}
-    def handle_comment_curlycurlyexlaim(self, data):
+    def handle_comment_curly_exlaim(self, data):
         pass
 
     # Overridable -- handle comment {{!-- }}
-    def handle_comment_curlycurlyexlaimdash(self, data):
+    def handle_comment_curly_exlaim_dash(self, data):
         pass
 
     # Overridable -- handle comment @* *@
-    def handle_comment_atstar(self, data):
+    def handle_comment_at_star(self, data):
         pass
 
     # Overridable -- handle declaration

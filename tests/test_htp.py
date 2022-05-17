@@ -53,19 +53,19 @@ class EventCollector(Htp):
     def handle_comment(self, data):
         self.append(("comment", data))
 
-    def handle_comment_curlyhash(self, data):
+    def handle_comment_curly_hash(self, data):
         self.append(("comment", data))
 
-    def handle_comment_curlycurlyexlaim(self, data):
+    def handle_comment_curly_exlaim(self, data):
         self.append(("comment", data))
 
-    def handle_comment_curlycurlyexlaimdash(self, data):
+    def handle_comment_curly_exlaim_dash(self, data):
         self.append(("comment", data))
 
-    def handle_comment_atstar(self, data):
+    def handle_comment_at_star(self, data):
         self.append(("comment", data))
 
-    def handle_comment_curlyperc(self, data, attrs):
+    def handle_comment_curly_perc(self, data, attrs):
         self.append(("comment", data, attrs))
 
     def handle_charref(self, data):
