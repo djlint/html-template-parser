@@ -188,7 +188,9 @@ endendtag_curly_four = re.compile("}}}}")
 # the HTML 5 spec, section 8.1.2.2, doesn't allow spaces between
 # </ and the tag name, so maybe this should be fixed
 endtagfind = re.compile(r"</\s*([a-zA-Z][-.a-zA-Z0-9:_]*)\s*>")
-endtagfind_curly_perc = re.compile(r"{%\s*end([a-zA-Z][-.a-zA-Z0-9:_]*)\s*%}", re.I)
+endtagfind_curly_perc = re.compile(
+    r"{%-?\s*end([a-zA-Z][-.a-zA-Z0-9:_]*).*?\s*-?%}", re.I
+)
 endtagfind_curly_hash = re.compile(r"{{/([a-zA-Z][-.a-zA-Z0-9:_]*)\s*}}", re.I)
 endtagfind_curly_four = re.compile(r"{{{{/([a-zA-Z][-.a-zA-Z0-9:_]*)\s*}}}}", re.I)
 
@@ -1165,15 +1167,17 @@ class Htp(_markupbase.ParserBase):
         if rawdata[i:].endswith("-%}"):
             props.append("spaceless-right")
 
+        attrs = []
         gtpos = match.end()
         match = endtagfind_curly_perc.match(rawdata, i)  # </ + tag + >
+        namematch = tagfind_tolerant_curly_perc_end.match(rawdata, i + start_width)
         if not match:
+
             if self.cdata_elem is not None:
                 self.handle_data(rawdata[i:gtpos])
                 return gtpos
             # find the name: w3.org/TR/html5/tokenization.html#tag-name-state
 
-            namematch = tagfind_tolerant_curly_perc_end.match(rawdata, i + start_width)
             if not namematch:
                 # w3.org/TR/html5/tokenization.html#end-tag-open-state
                 if rawdata[i : i + 3] == "</>":
@@ -1195,9 +1199,32 @@ class Htp(_markupbase.ParserBase):
             if tagname == "comment":
                 self.handle_comment_curly_perc_close(tagname, props)
             else:
-                self.handle_endtag_curly_perc(tagname, props)
+                k = namematch.end()
+                while k < gtpos:
+                    m = attrfind_tolerant_curly_perc.match(rawdata, k)
+                    if not m:
+                        break
+
+                    attr = m.group(1)
+
+                    attrs.append(attr)
+                    k = m.end()
+                self.handle_endtag_curly_perc(tagname, attrs, props)
             return gtpos + 1
         elem = match.group(1).lower()  # script or style
+
+        if namematch:
+            k = namematch.end()
+            while k < gtpos:
+                m = attrfind_tolerant_curly_perc.match(rawdata, k)
+                if not m:
+                    break
+
+                attr = m.group(1)
+
+                attrs.append(attr)
+                k = m.end()
+
         if self.cdata_elem is not None:
             if elem != self.cdata_elem:
                 self.handle_data(rawdata[i:gtpos])
@@ -1205,7 +1232,7 @@ class Htp(_markupbase.ParserBase):
         if elem == "comment":
             self.handle_comment_curly_perc_close(elem, props)
         else:
-            self.handle_endtag_curly_perc(elem, props)
+            self.handle_endtag_curly_perc(elem, attrs, props)
         self.clear_cdata_mode()
         return gtpos
 
@@ -1711,7 +1738,7 @@ class Htp(_markupbase.ParserBase):
         pass  # pragma: no cover
 
     # Overridable -- handle template statement end tag
-    def handle_endtag_curly_perc(self, tag, props):
+    def handle_endtag_curly_perc(self, tag, attrs, props):
         pass  # pragma: no cover
 
     # Overridable -- handle template statement end tag
