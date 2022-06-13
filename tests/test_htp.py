@@ -8,7 +8,7 @@ See Python's license: https://github.com/python/cpython/blob/main/LICENSE
 https://github.com/python/cpython/blob/f4c03484da59049eb62a9bf7777b963e2267d187/Lib/test/test_htmlparser.py
 
 """
-# pylint: disable=C0115,W0237,E1101,R0201,W0108,W1404
+# pylint: disable=C0115,W0237,E1101,W0108,W1404,C3001
 
 import pprint
 import unittest
