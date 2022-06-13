@@ -8,7 +8,7 @@ See Python's license: https://github.com/python/cpython/blob/main/LICENSE
 https://github.com/python/cpython/blob/f4c03484da59049eb62a9bf7777b963e2267d187/Lib/test/test_htmlparser.py
 
 """
-# pylint: disable=C0115,W0237,E1101,R0201,W0108,W1404
+# pylint: disable=C0115,W0237,E1101,W0108,W1404,C3001
 
 import pprint
 import unittest
@@ -57,8 +57,8 @@ class EventCollector(Htp):
     def handle_endtag(self, tag):
         self.append(("endtag", tag))
 
-    def handle_endtag_curly_perc(self, tag, props):
-        self.append(("endtag_curly_perc", tag, props))
+    def handle_endtag_curly_perc(self, tag, attrs, props):
+        self.append(("endtag_curly_perc", tag, attrs, props))
 
     def handle_endtag_curly_hash(self, tag):
         self.append(("endtag_curly_hash", tag))
@@ -482,7 +482,7 @@ text
         html = "{% if this %}{% endif -%}"
         expected = [
             ("starttag_curly_perc", "if", ["this"], []),
-            ("endtag_curly_perc", "if", ["spaceless-right"]),
+            ("endtag_curly_perc", "if", [], ["spaceless-right"]),
         ]
         self._run_check(html, expected)
 
@@ -491,7 +491,15 @@ text
         expected = [
             ("starttag_curly_perc", "if", ["this"], ["spaceless-left"]),
             ("starttag_curly_perc", "else", [], ["spaceless-right"]),
-            ("endtag_curly_perc", "if", []),
+            ("endtag_curly_perc", "if", [], []),
+        ]
+        self._run_check(html, expected)
+
+    def test_curly_block(self):
+        html = "{% block cool %}{% endblock cool%}"
+        expected = [
+            ("starttag_curly_perc", "block", ["cool"], []),
+            ("endtag_curly_perc", "block", ["cool"], []),
         ]
         self._run_check(html, expected)
 
@@ -499,14 +507,14 @@ text
         html = "{% for x in range(0,10) %}{% endfor %}"
         expected = [
             ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"], []),
-            ("endtag_curly_perc", "for", []),
+            ("endtag_curly_perc", "for", [], []),
         ]
         self._run_check(html, expected)
 
         html = "{% for x in range(0,10) %}{{ x | length }}{% endfor %}"
         expected = [
             ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"], []),
-            ("endtag_curly_perc", "for", []),
+            ("endtag_curly_perc", "for", [], []),
         ]
         self._run_check(html, expected)
 
