@@ -15,6 +15,7 @@
     "maintenance", 
     "renovate"
   ],
+  "baseBranches": ["dev"],
   "packageRules": [
     {
       "matchUpdateTypes": ["pin","digest"],
