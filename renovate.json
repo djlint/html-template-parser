@@ -9,9 +9,6 @@
     ":npm",
     "npm:unpublishSafe"
   ],
-  "assignees": [
-    "christopherpickering"
-  ],
   "bumpVersion": "patch",
   "commitMessagePrefix": "chore(deps)",
   "labels": [
