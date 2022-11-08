@@ -39,87 +39,87 @@ class EventCollector(Htp):
 
     # structure markup
 
-    def handle_starttag(self, start, end, tag, attrs, props):
+    def handle_starttag(self, tag, attrs, props):
         self.append(("starttag", tag, attrs, props))
 
-    def handle_starttag_curly_perc(self, start, end, tag, attrs, props):
+    def handle_starttag_curly_perc(self, tag, attrs, props):
         self.append(("starttag_curly_perc", tag, attrs, props))
 
-    def handle_starttag_curly_two_hash(self, start, end, tag, attrs, props):
+    def handle_starttag_curly_two_hash(self, tag, attrs, props):
         self.append(("starttag_curly_two_hash", tag, attrs, props))
 
-    def handle_starttag_curly_four(self, start, end, tag, attrs, props):
+    def handle_starttag_curly_four(self, tag, attrs, props):
         self.append(("starttag_curly_four", tag, attrs, props))
 
-    def handle_startendtag(self, start, end, tag, attrs, props):
+    def handle_startendtag(self, tag, attrs, props):
         self.append(("startendtag", tag, attrs, props))
 
-    def handle_endtag(self, start, end, tag):
+    def handle_endtag(self, tag):
         self.append(("endtag", tag))
 
-    def handle_endtag_curly_perc(self, start, end, tag, attrs, props):
+    def handle_endtag_curly_perc(self, tag, attrs, props):
         self.append(("endtag_curly_perc", tag, attrs, props))
 
-    def handle_endtag_curly_hash(self, start, end, tag):
+    def handle_endtag_curly_hash(self, tag):
         self.append(("endtag_curly_hash", tag))
 
-    def handle_endtag_curly_four_slash(self, start, end, tag, attrs, props):
+    def handle_endtag_curly_four_slash(self, tag, attrs, props):
         self.append(("endtag_curly_four", tag, attrs, props))
 
-    def handle_curly_two(self, start, end, data, attrs, props):
+    def handle_curly_two(self, data, attrs, props):
         self.append(("curly_two", data, attrs, props))
 
-    def handle_slash_curly_two(self, start, end, data, attrs):
+    def handle_slash_curly_two(self, data, attrs):
         self.append(("slash_curly_two", data, attrs))
 
-    def handle_curly_three(self, start, end, data):
+    def handle_curly_three(self, data):
         self.append(("curly_three", data))
 
-    def handle_endtag_curly_two_slash(self, start, end, tag, props):
+    def handle_endtag_curly_two_slash(self, tag, props):
         self.append(("curly_two_slash", tag, props))
 
     # all other markup
 
-    def handle_comment(self, start, end, data):
+    def handle_comment(self, data):
         self.append(("comment", data))
 
-    def handle_comment_curly_hash(self, start, end, data):
+    def handle_comment_curly_hash(self, data):
         self.append(("comment_curly_hash", data))
 
-    def handle_comment_curly_two_exlaim(self, start, end, data, props):
+    def handle_comment_curly_two_exlaim(self, data, props):
         self.append(("comment_curly_exlaim", data, props))
 
-    def handle_comment_at_star(self, start, end, data):
+    def handle_comment_at_star(self, data):
         self.append(("comment_at_star", data))
 
-    def handle_comment_curly_perc(self, start, end, data, attrs, props):
+    def handle_starttag_comment_curly_perc(self, data, attrs, props):
         self.append(("comment_curly_perc", data, attrs, props))
 
-    def handle_comment_curly_perc_close(self, start, end, data, props):
+    def handle_endtag_comment_curly_perc(self, data, props):
         self.append(("comment_curly_perc_close", data, props))
 
-    def handle_charref(self, start, end, data):
+    def handle_charref(self, data):
         self.append(("charref", data))
 
-    def handle_data(self, start, end, data):
+    def handle_data(self, data):
         self.append(("data", data))
 
-    def handle_decl(self, start, end, data):
+    def handle_decl(self, data):
         self.append(("decl", data))
 
-    def handle_entityref(self, start, end, data):
+    def handle_entityref(self, data):
         self.append(("entityref", data))
 
-    def handle_pi(self, start, end, data):
+    def handle_pi(self, data):
         self.append(("pi", data))
 
-    def unknown_decl(self, start, end, decl):
+    def unknown_decl(self, decl):
         self.append(("unknown decl", decl))
 
 
 class EventCollectorExtra(EventCollector):
-    def handle_starttag(self, start, end, tag, attrs, props):
-        EventCollector.handle_starttag(self, start, end, tag, attrs, props)
+    def handle_starttag(self, tag, attrs, props):
+        EventCollector.handle_starttag(self, tag, attrs, props)
         self.append(("starttag_text", self.get_starttag_text()))
 
 
@@ -880,6 +880,190 @@ text
                 ("endtag", "a"),
                 ("data", " bar & baz"),
             ],
+        )
+
+    def test_template_tags(self):
+        self._run_check("{# comment #}", [("comment_curly_hash", " comment ")])
+        self._run_check("{{{ stuff }}}", [("curly_three", "stuff")])
+
+    def test_handlebars_escape(self):
+        self._run_check(
+            r"""
+            \{{escaped attr}}
+{{{{raw}}}}
+  {{escaped}}data-src={%-url "tag:tag" pk=a.B.c 123    -%}
+{{{{/raw}}}}""",
+            [
+                ("data", "\n            "),
+                ("slash_curly_two", "escaped", "attr"),
+                ("data", "\n"),
+                ("starttag_curly_four", "raw", "", []),
+                ("data", "\n  "),
+                ("curly_two", "escaped", "", []),
+                ("data", "data-src="),
+                (
+                    "starttag_curly_perc",
+                    "url",
+                    '"tag:tag" pk=a.B.c 123',
+                    ["spaceless-left", "spaceless-right"],
+                ),
+                ("data", "\n"),
+                ("endtag_curly_four", "raw", "", []),
+            ],
+        )
+
+    def test_handlebars_if(self):
+        self._run_check(
+            """
+            {{#if test}}
+      {{title}}
+    {{^}}
+      Empty
+    {{/if}}""",
+            [
+                ("data", "\n            "),
+                ("starttag_curly_two_hash", "if", "test", []),
+                ("data", "\n      "),
+                ("curly_two", "title", "", []),
+                ("data", "\n    "),
+                ("curly_two", "^", "", []),
+                ("data", "\n      Empty\n    "),
+                ("curly_two_slash", "if", []),
+            ],
+        )
+
+    def test_handlebars_whitespace_control(self):
+        self._run_check(
+            """
+            {{~#if test}}
+      {{~title}}
+    {{~^~}}
+      Empty
+    {{~/if~}}
+            """,
+            [
+                ("data", "\n            "),
+                ("starttag_curly_two_hash", "if", "test", ["spaceless-left"]),
+                ("data", "\n      "),
+                ("curly_two", "title", "", ["spaceless-left"]),
+                ("data", "\n    "),
+                ("curly_two", "^", "", ["spaceless-left", "spaceless-right"]),
+                ("data", "\n      Empty\n    "),
+                ("curly_two_slash", "if", ["spaceless-left", "spaceless-right"]),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_handlebars_each(self):
+        self._run_check(
+            """
+            {{#each people}}
+    {{../prefix}} {{firstname}}
+{{/each}}
+            """,
+            [
+                ("data", "\n            "),
+                ("starttag_curly_two_hash", "each", "people", []),
+                ("data", "\n    "),
+                ("curly_two", "../prefix", "", []),
+                ("data", " "),
+                ("curly_two", "firstname", "", []),
+                ("data", "\n"),
+                ("curly_two_slash", "each", []),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_handlebars_expressions(self):
+        self._run_check(
+            """
+            {{person.firstname}} {{person.lastname}}
+            """,
+            [
+                ("data", "\n            "),
+                ("curly_two", "person.firstname", "", []),
+                ("data", " "),
+                ("curly_two", "person.lastname", "", []),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_handlebars_special_char(self):
+        self._run_check(
+            """
+            {{{specialChars}}}
+            """,
+            [
+                ("data", "\n            "),
+                ("curly_three", "specialChars"),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_handlebars_attributes(self):
+        self._run_check(
+            """
+            {{loud lastname}}
+            """,
+            [
+                ("data", "\n            "),
+                ("curly_two", "loud", "lastname", []),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_set(self):
+        self._run_check(
+            """
+            {% set cool=[{loud:"lastname"}] %}
+            """,
+            [
+                ("data", "\n            "),
+                ("starttag_curly_perc", "set", 'cool=[{loud:"lastname"}]', []),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_bad_stuff(self):
+        self._run_check("{% {{ ok }}", [("data", "{% "), ("curly_two", "ok", "", [])])
+        self._run_check(
+            "{# {% ok %}", [("data", "{# "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{ {% ok %}", [("data", "{{ "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{! {% ok %}", [("data", "{{! "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "@* {% ok %}", [("data", "@* "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{# {% ok %}", [("data", "{{# "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{/ {% ok %}", [("data", "{{/ "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "\\{{ {% ok %}",
+            [("data", "\\{{ "), ("starttag_curly_perc", "ok", "", [])],
+        )
+        self._run_check(
+            "{{{ {% ok %}", [("data", "{{{ "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{{{ {% ok %}",
+            [("data", "{{{{ "), ("starttag_curly_perc", "ok", "", [])],
+        )
+        self._run_check(
+            "{{{{/ {% ok %}",
+            [("data", "{{{{/ "), ("starttag_curly_perc", "ok", "", [])],
+        )
+        self._run_check(
+            '" {% ok %}', [("data", '" '), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "' {% ok %}", [("data", "' "), ("starttag_curly_perc", "ok", "", [])]
         )
 
 

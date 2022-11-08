@@ -12,6 +12,7 @@ See Python's license: https://github.com/python/cpython/blob/main/LICENSE
 - feed cannot be passed a single char, but a full string
 
 """
+# pylint: disable=R0913
 
 import re
 from html import unescape
@@ -353,9 +354,9 @@ class Htp(_markupbase.ParserBase):
                     j = n
             if i < j:
                 if self.convert_charrefs and not self.cdata_elem:
-                    self.handle_data(i, j, unescape(rawdata[i:j]))
+                    self.handle_data(unescape(rawdata[i:j]))
                 else:
-                    self.handle_data(i, j, rawdata[i:j])
+                    self.handle_data(rawdata[i:j])
             i = self.updatepos(i, j)
 
             if i == n:
@@ -374,7 +375,7 @@ class Htp(_markupbase.ParserBase):
                 elif startswith("<!", i):
                     k = self.parse_html_declaration(i)
                 elif (i + 1) < n:
-                    self.handle_data(i, i + 1, "<")
+                    self.handle_data("<")
                     k = i + 1
                 else:
                     break
@@ -391,15 +392,15 @@ class Htp(_markupbase.ParserBase):
                         k += 1
 
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
                 i = self.updatepos(i, k)
             elif startswith("&#", i):
                 match = charref.match(rawdata, i)
                 if match:
                     name = match.group()[2:-1]
-                    self.handle_charref(i, match.end(), name)
+                    self.handle_charref(name)
                     k = match.end()
                     if not startswith(";", k - 1):
                         k = k - 1
@@ -407,14 +408,14 @@ class Htp(_markupbase.ParserBase):
                     continue
                 else:
                     if ";" in rawdata[i:]:  # bail by consuming &#
-                        self.handle_data(i, i + 2, rawdata[i : i + 2])
+                        self.handle_data(rawdata[i : i + 2])
                         i = self.updatepos(i, i + 2)
                     break
             elif startswith("&", i):
                 match = entityref.match(rawdata, i)
                 if match:
                     name = match.group(1)
-                    self.handle_entityref(i, match.end(), name)
+                    self.handle_entityref(name)
                     k = match.end()
                     if not startswith(";", k - 1):
                         k = k - 1
@@ -433,7 +434,7 @@ class Htp(_markupbase.ParserBase):
                 elif (i + 1) < n:
                     # not the end of the buffer, and can't be confused
                     # with some other construct
-                    self.handle_data(i, i + 1, "&")
+                    self.handle_data("&")
                     i = self.updatepos(i, i + 1)
                 else:
                     break
@@ -454,9 +455,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
             elif startswith("{#", i):
@@ -474,9 +475,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
             elif startswith("{{!", i):
@@ -495,9 +496,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
             elif startswith("@*", i):
@@ -515,9 +516,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
 
@@ -537,9 +538,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
 
@@ -558,13 +559,13 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
 
-            elif startswith("{{{{/", i):
+            elif startswith("{{{{/", i) or startswith("{{{{~/", i):
                 # {{{{/ }}}} handlebars raw block
                 k = self.parse_endtag_curly_four(i)
 
@@ -580,9 +581,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
 
@@ -602,9 +603,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
 
@@ -625,9 +626,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
 
@@ -648,9 +649,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
             elif startswith("{{", i):
@@ -669,9 +670,9 @@ class Htp(_markupbase.ParserBase):
                     else:
                         k += 1
                     if self.convert_charrefs and not self.cdata_elem:
-                        self.handle_data(i, k, unescape(rawdata[i:k]))
+                        self.handle_data(unescape(rawdata[i:k]))
                     else:
-                        self.handle_data(i, k, rawdata[i:k])
+                        self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
 
@@ -686,9 +687,9 @@ class Htp(_markupbase.ParserBase):
                     k += 1
 
                 if self.convert_charrefs and not self.cdata_elem:
-                    self.handle_data(i, k, unescape(rawdata[i:k]))
+                    self.handle_data(unescape(rawdata[i:k]))
                 else:
-                    self.handle_data(i, k, rawdata[i:k])
+                    self.handle_data(rawdata[i:k])
 
                 i = self.updatepos(i, k)
 
@@ -697,9 +698,9 @@ class Htp(_markupbase.ParserBase):
         # end while
         if end and i < n and not self.cdata_elem:
             if self.convert_charrefs and not self.cdata_elem:
-                self.handle_data(i, n, unescape(rawdata[i:n]))
+                self.handle_data(unescape(rawdata[i:n]))
             else:
-                self.handle_data(i, n, rawdata[i:n])
+                self.handle_data(rawdata[i:n])
             i = self.updatepos(i, n)
         self.rawdata = rawdata[i:]
 
@@ -721,7 +722,7 @@ class Htp(_markupbase.ParserBase):
             gtpos = rawdata.find(">", i + 9)
             if gtpos == -1:
                 return -1
-            self.handle_decl(i, gtpos, rawdata[i + 2 : gtpos])
+            self.handle_decl(rawdata[i + 2 : gtpos])
             return gtpos + 1
         else:
             return self.parse_bogus_comment(i)
@@ -737,7 +738,7 @@ class Htp(_markupbase.ParserBase):
         if pos == -1:
             return -1
         if report:
-            self.handle_comment(i, pos, rawdata[i + 2 : pos])
+            self.handle_comment(rawdata[i + 2 : pos])
         return pos + 1
 
     # Internal -- parse processing instr, return end or -1 if not terminated
@@ -748,7 +749,7 @@ class Htp(_markupbase.ParserBase):
         if not match:
             return -1
         j = match.start()
-        self.handle_pi(i, j, rawdata[i + 2 : j])
+        self.handle_pi(rawdata[i + 2 : j])
         j = match.end()
         return j
 
@@ -797,14 +798,14 @@ class Htp(_markupbase.ParserBase):
                 offset = len(self.__starttag_text) - self.__starttag_text.rfind("\n")
             else:
                 offset = offset + len(self.__starttag_text)
-            self.handle_data(i, endpos, rawdata[i:endpos])
+            self.handle_data(rawdata[i:endpos])
             return endpos
         if end.endswith("/>"):
             # XHTML-style empty tag: <span attr="value" />
             props.append("is-selfclosing")
-            self.handle_startendtag(i, endpos, tag, attrs, props)
+            self.handle_startendtag(tag, attrs, props)
         else:
-            self.handle_starttag(i, endpos, tag, attrs, props)
+            self.handle_starttag(tag, attrs, props)
             if tag in self.CDATA_CONTENT_ELEMENTS:
                 self.set_cdata_mode(tag)
         return endpos
@@ -833,7 +834,7 @@ class Htp(_markupbase.ParserBase):
 
         self.lasttag = tag = match.group(1).lower()
 
-        self.handle_starttag_curly_two_hash(i, endpos, tag.strip(), attrs, props)
+        self.handle_starttag_curly_two_hash(tag.strip(), attrs, props)
 
         return endpos
 
@@ -864,7 +865,7 @@ class Htp(_markupbase.ParserBase):
 
         self.lasttag = tag = match.group(1).lower()
 
-        self.handle_starttag_curly_four(i, endpos, tag.strip(), attrs, props)
+        self.handle_starttag_curly_four(tag.strip(), attrs, props)
 
         return endpos
 
@@ -900,9 +901,9 @@ class Htp(_markupbase.ParserBase):
         attrs = match.group(2).strip()
 
         if tag.strip() == "comment":
-            self.handle_comment_curly_perc(i, endpos, tag.strip(), attrs, props)
+            self.handle_starttag_comment_curly_perc(tag.strip(), attrs, props)
         else:
-            self.handle_starttag_curly_perc(i, endpos, tag.strip(), attrs, props)
+            self.handle_starttag_curly_perc(tag.strip(), attrs, props)
         if tag in self.CDATA_CONTENT_ELEMENTS:
             self.set_cdata_mode(tag)
 
@@ -922,7 +923,7 @@ class Htp(_markupbase.ParserBase):
 
         tag = match.group(1).lower()
 
-        self.handle_slash_curly_two(i, endpos, tag.strip(), attrs)
+        self.handle_slash_curly_two(tag.strip(), attrs)
 
         return endpos
 
@@ -954,7 +955,7 @@ class Htp(_markupbase.ParserBase):
         if tag_text.endswith("~}}"):
             props.append("spaceless-right")
 
-        self.handle_curly_two(i, endpos, tag.strip(), attrs, props)
+        self.handle_curly_two(tag.strip(), attrs, props)
 
         return endpos
 
@@ -970,7 +971,7 @@ class Htp(_markupbase.ParserBase):
 
         data = match.group(1)
 
-        self.handle_curly_three(i, endpos, data.strip())
+        self.handle_curly_three(data.strip())
 
         return endpos
 
@@ -1036,7 +1037,7 @@ class Htp(_markupbase.ParserBase):
         match = endtagfind.match(rawdata, i)  # </ + tag + >
         if not match:
             if self.cdata_elem is not None:
-                self.handle_data(i, gtpos, rawdata[i:gtpos])
+                self.handle_data(rawdata[i:gtpos])
                 return gtpos
             # find the name: w3.org/TR/html5/tokenization.html#tag-name-state
             namematch = tagfind_tolerant.match(rawdata, i + 2)
@@ -1052,16 +1053,16 @@ class Htp(_markupbase.ParserBase):
             # </tag attr=">">, but looking for > after the name should cover
             # most of the cases and is much simpler
             gtpos = rawdata.find(">", namematch.end())
-            self.handle_endtag(i, gtpos, tagname)
+            self.handle_endtag(tagname)
             return gtpos + 1
 
         elem = match.group(1).lower()  # script or style
         if self.cdata_elem is not None:
             if elem != self.cdata_elem:
-                self.handle_data(i, gtpos, rawdata[i:gtpos])
+                self.handle_data(rawdata[i:gtpos])
                 return gtpos
 
-        self.handle_endtag(i, match.end(), elem)
+        self.handle_endtag(elem)
         self.clear_cdata_mode()
         return gtpos
 
@@ -1090,9 +1091,9 @@ class Htp(_markupbase.ParserBase):
         tag = match.group(1).lower()  # script or style
 
         if tag == "comment":
-            self.handle_comment_curly_perc_close(i, j, tag, props)
+            self.handle_endtag_comment_curly_perc(tag, props)
         else:
-            self.handle_endtag_curly_perc(i, j, tag, attrs, props)
+            self.handle_endtag_curly_perc(tag, attrs, props)
         self.clear_cdata_mode()
         return j
 
@@ -1119,7 +1120,7 @@ class Htp(_markupbase.ParserBase):
         if tag_text.endswith("~}}"):
             props.append("spaceless-right")
 
-        self.handle_endtag_curly_two_slash(i, endpos, tag, props)
+        self.handle_endtag_curly_two_slash(tag, props)
 
         return endpos
 
@@ -1149,7 +1150,7 @@ class Htp(_markupbase.ParserBase):
 
         attrs = match.group(2).strip()
 
-        self.handle_endtag_curly_four_slash(i, endpos, tag.strip(), attrs, props)
+        self.handle_endtag_curly_four_slash(tag.strip(), attrs, props)
 
         return endpos
 
@@ -1198,13 +1199,13 @@ class Htp(_markupbase.ParserBase):
                 # end of declaration syntax
                 data = rawdata[i + 2 : j]
                 if decltype == "doctype":
-                    self.handle_decl(i, j, data)
+                    self.handle_decl(data)
                 else:
                     # According to the HTML5 specs sections "8.2.4.44 Bogus
                     # comment state" and "8.2.4.45 Markup declaration open
                     # state", a comment token should be emitted.
                     # Calling unknown_decl provides more flexibility though.
-                    self.unknown_decl(i, j, data)
+                    self.unknown_decl(data)
                 return j + 1
             if c in "\"'":
                 m = _declstringlit_match(rawdata, j)
@@ -1257,7 +1258,7 @@ class Htp(_markupbase.ParserBase):
             return -1
         if report:
             j = match.start(0)
-            self.unknown_decl(i, j, rawdata[i + 3 : j])
+            self.unknown_decl(rawdata[i + 3 : j])
         return match.end(0)
 
     # Internal -- parse comment <!-- -->, return length or -1 if not terminated
@@ -1270,7 +1271,7 @@ class Htp(_markupbase.ParserBase):
             return -1
         if report:
             j = match.start(0)
-            self.handle_comment(i, j, rawdata[i + 4 : j])
+            self.handle_comment(rawdata[i + 4 : j])
         return match.end(0)
 
     # Internal -- parse comment {# #}, return length or -1 if not terminated
@@ -1283,7 +1284,7 @@ class Htp(_markupbase.ParserBase):
             return -1
         if report:
             j = match.start(0)
-            self.handle_comment_curly_hash(i, j, rawdata[i + 2 : j])
+            self.handle_comment_curly_hash(rawdata[i + 2 : j])
         return match.end(0)
 
     # Internal -- parse comment {{! }} or {{!-- }}, return length or -1 if not terminated
@@ -1313,7 +1314,7 @@ class Htp(_markupbase.ParserBase):
 
         j = match.end()
 
-        self.handle_comment_curly_two_exlaim(i, j, match.group(1), props)
+        self.handle_comment_curly_two_exlaim(match.group(1), props)
         return j
 
     # Internal -- parse comment @* *@ , return length or -1 if not terminated
@@ -1326,7 +1327,7 @@ class Htp(_markupbase.ParserBase):
             return -1
         if report:
             j = match.start(0)
-            self.handle_comment_at_star(i, j, rawdata[i + 2 : j])
+            self.handle_comment_at_star(rawdata[i + 2 : j])
         return match.end(0)
 
     # Internal -- scan past the internal subset in a <!DOCTYPE declaration,
@@ -1546,96 +1547,99 @@ class Htp(_markupbase.ParserBase):
                 "expected name token at %r" % rawdata[declstartpos : declstartpos + 20]
             )
 
-    # To be overridden -- handlers for unknown objects
-    def unknown_decl(self, start, end, data):
-        pass  # pragma: no cover
-
-    # Overridable -- finish processing of start+end tag: <tag.../>
-    def handle_startendtag(self, start, end, tag, attrs, props):
-        self.handle_starttag(start, end, tag, attrs, props)
-        self.handle_endtag(start, end, tag)
-
-    # Overridable -- handle start tag
-    def handle_starttag(self, start, end, tag, attrs, props):
-        pass  # pragma: no cover
-
-    # Overridable -- handle template statement start tag
-    def handle_starttag_curly_perc(self, start, end, tag, attrs, props):
-        pass  # pragma: no cover
-
-    # Overridable -- handle template statement start tag
-    def handle_starttag_curly_two_hash(self, start, end, tag, attrs):
-        pass  # pragma: no cover
-
-    # Overridable -- handle template statement start tag
-    def handle_starttag_curly_four(self, start, end, tag, attrs, props):
-        pass  # pragma: no cover
-
-    # Overridable -- handle end tag
-    def handle_endtag(self, start, end, tag):
-        pass  # pragma: no cover
-
-    # Overridable -- handle template statement end tag
-    def handle_endtag_curly_perc(self, start, end, tag, attrs, props):
-        pass  # pragma: no cover
-
-    def handle_endtag_curly_two_slash(self, start, end, tag, props):
+    def unknown_decl(self, data):
+        # handlers for unknown objects
         pass
 
-    # Overridable -- handle template statement end tag
-    def handle_endtag_curly_four_slash(self, start, end, tag, attrs, props):
-        pass  # pragma: no cover
+    def handle_startendtag(self, tag, attrs, props):
+        # start and end of tag <p/>
+        self.handle_starttag(tag, attrs, props)
+        self.handle_endtag(tag)
 
-    # Overridable -- handle character reference
-    def handle_charref(self, start, end, name):
-        pass  # pragma: no cover
+    def handle_starttag(self, tag, attrs, props):
+        # start tag <p>
+        pass
 
-    # Overridable -- handle entity reference
-    def handle_entityref(self, start, end, name):
-        pass  # pragma: no cover
+    def handle_endtag(self, tag):
+        # end tag </p>
+        pass
 
-    # Overridable -- handle data
-    def handle_data(self, start, end, data):
-        pass  # pragma: no cover
+    def handle_starttag_curly_perc(self, tag, attrs, props):
+        # template start tag {% name %}
+        pass
 
-    # Overridable -- handle data
-    def handle_curly_two(self, start, end, data, attrs, props):
-        pass  # pragma: no cover
+    def handle_endtag_curly_perc(self, tag, attrs, props):
+        # template end tag {% endname %}
+        pass
 
-    def handle_slash_curly_two(self, start, end, data, attrs):
-        pass  # pragma: no cover
+    def handle_starttag_curly_two_hash(self, tag, attrs, props):
+        # handlebars/mustache loop {{#name attributes}}{{/name}}
+        pass
 
-    def handle_curly_three(self, start, end, data):
-        pass  # pragma: no cover
+    def handle_endtag_curly_two_slash(self, tag, props):
+        # handlebars/mustache loop {{#name attributes}}{{/name}}
+        pass
 
-    # Overridable -- handle comment <!-- -->
-    def handle_comment(self, start, end, data):
-        pass  # pragma: no cover
+    def handle_starttag_curly_four(self, tag, attrs, props):
+        # handlebars raw close {{{{raw}}}}{{{{/raw}}}}
+        pass
 
-    # Overridable -- handle comment {# #}
-    def handle_comment_curly_hash(self, start, end, data):
-        pass  # pragma: no cover
+    def handle_endtag_curly_four_slash(self, tag, attrs, props):
+        # handlebars raw close {{{{raw}}}}{{{{/raw}}}}
+        pass
 
-    # Overridable -- handle comment {% comment ... %}{%endcomment%}
-    def handle_comment_curly_perc(self, start, end, data, attrs, props):
-        pass  # pragma: no cover
+    def handle_charref(self, name):
+        # handle character reference
+        pass
 
-    # Overridable -- handle comment {% comment ... %}{%endcomment%}
-    def handle_comment_curly_perc_close(self, start, end, data, props):
-        pass  # pragma: no cover
+    def handle_entityref(self, name):
+        # handle entity reference
+        pass
 
-    # Overridable -- handle comment {{! }}
-    def handle_comment_curly_two_exlaim(self, start, end, data, props):
-        pass  # pragma: no cover
+    def handle_data(self, data):
+        # handle data
+        pass
 
-    # Overridable -- handle comment @* *@
-    def handle_comment_at_star(self, start, end, data):
-        pass  # pragma: no cover
+    def handle_curly_two(self, data, attrs, props):
+        # template value {{ value attrs }}
+        pass
 
-    # Overridable -- handle declaration
-    def handle_decl(self, start, end, decl):
-        pass  # pragma: no cover
+    def handle_slash_curly_two(self, data, attrs):
+        # handlebars/mustache inline raw block
+        pass
 
-    # Overridable -- handle processing instruction
-    def handle_pi(self, start, end, data):
-        pass  # pragma: no cover
+    def handle_curly_three(self, data):
+        # handlebars un-escaped html
+        pass
+
+    def handle_comment(self, data):
+        # comment <!-- -->
+        pass
+
+    def handle_comment_curly_hash(self, data):
+        # django/jinja comment
+        pass
+
+    def handle_starttag_comment_curly_perc(self, data, attrs, props):
+        # django multi line comment {% comment %}{% endcomment %}
+        pass
+
+    def handle_endtag_comment_curly_perc(self, data, props):
+        # django multi line comment {% comment %}{% endcomment %}
+        pass
+
+    def handle_comment_curly_two_exlaim(self, data, props):
+        # handlebars comment
+        pass
+
+    def handle_comment_at_star(self, data):
+        # c# razor pages comment
+        pass
+
+    def handle_decl(self, decl):
+        # handle declaration
+        pass
+
+    def handle_pi(self, data):
+        # handle processing instruction
+        pass

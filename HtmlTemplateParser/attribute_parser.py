@@ -4,7 +4,7 @@ Attributes are passed in as a complete string.
 
 AttributeParser(attributes).parse()
 """
-
+# pylint: disable=R0916
 import re
 
 curly_two = re.compile(
@@ -19,9 +19,9 @@ curly_four_slash = re.compile(
 )
 curly_hash = re.compile(r"{#((?:(?!#}).)*?)#}")
 at_star = re.compile(r"@\*((?:(?!\*@).)*?)\*@")
-curly_two_exclaim = re.compile(r"{{\!((?:(?!}}).)*?)}}")
+curly_two_exclaim = re.compile(r"{{\!(?:--)?\s*((?:(?!}}).)*?)(?:--)?}}")
 curly_percent = re.compile(
-    r"{%-?\+?\s*(.(?:(?!-?\+?%}|\t|\n|\r|\f| |\x00).)*)((?:\s|(?!-?\+?%}).)*)-?\+?%}"
+    r"{%-?\+?\s*(end)?(.(?:(?!-?\+?%}|\t|\n|\r|\f| |\x00).)*)((?:\s|(?!-?\+?%}).)*)-?\+?%}"
 )
 curly_two_hash = re.compile(
     r"{{~?#\s*(.(?:(?!~?}}|\t|\n|\r|\f| |\x00).)*)((?:\s|(?!~?}}).)*)~?}}"
@@ -62,6 +62,10 @@ class AttributeParser:
         else:
             self.offset = self.offset + j - i
         return j
+
+    def getpos(self):
+        """Return current line number and offset."""
+        return self.lineno, self.offset
 
     def parse(self):
         rawdata = self.rawdata
@@ -120,7 +124,7 @@ class AttributeParser:
                     k = self.parse_html(i)
                 i = self.updatepos(i, k)
 
-            elif startswith("{{{{/", i):
+            elif startswith("{{{{/", i) or startswith("{{{{~/", i):
                 # handlebars raw close {{{{raw}}}}{{{{/raw}}}}
                 k = self.parse_curly_four_slash(i)
                 if k == -1:
@@ -183,8 +187,8 @@ class AttributeParser:
             return -1
 
         tag_text = match.group()
-        tag = match.group(1)
-        attributes = match.group(2).strip() if match.group(2) else None
+        tag = match.group(2)
+        attributes = match.group(3).strip() if match.group(3) else None
 
         if tag_text.startswith("{%-"):
             props.append("spaceless-left")
@@ -200,23 +204,34 @@ class AttributeParser:
 
         j = match.end()
 
-        self.handle_curly_perc(tag, attributes, props)
+        if match.group(1) == "end":
+            if tag == "comment":
+                self.handle_endtag_comment_curly_perc(tag, attributes, props)
+            else:
+                self.handle_endtag_curly_perc(tag, attributes, props)
+        else:
+            if tag == "comment":
+                self.handle_starttag_comment_curly_perc(tag, attributes, props)
+            else:
+                self.handle_starttag_curly_perc(tag, attributes, props)
 
         return j
 
     def parse_curly_hash(self, i):
+        # django/jinja commment
         rawdata = self.rawdata
 
         match = curly_hash.match(rawdata, i)
         if not match:
             return -1
 
-        self.handle_curly_hash(match.group(1).strip())
+        self.handle_comment_curly_hash(match.group(1).strip())
 
         j = match.end()
         return j
 
     def parse_curly_two_exclaim(self, i):
+        # handlebars comment
         rawdata = self.rawdata
         props = []
         match = curly_two_exclaim.match(rawdata, i)
@@ -231,15 +246,9 @@ class AttributeParser:
         if tag_text.endswith("--}}"):
             props.append("safe-right")
 
-        if tag_text.startswith("{{~"):
-            props.append("spaceless-left")
-
-        if tag_text.endswith("~}}"):
-            props.append("spaceless-right")
-
         j = match.end()
 
-        self.handle_curly_two_exclaim(match.group(1), props)
+        self.handle_comment_curly_two_exclaim(match.group(1), props)
         return j
 
     def parse_at_star(self, i):
@@ -251,11 +260,12 @@ class AttributeParser:
 
         j = match.end()
 
-        self.handle_at_star(match.group(1).strip())
+        self.handle_comment_at_star(match.group(1).strip())
 
         return j
 
     def parse_curly_two_hash(self, i):
+        # handlebars/mustache loop {{#name attributes}}{{/name}}
         rawdata = self.rawdata
         props = []
         match = curly_two_hash.match(rawdata, i)
@@ -275,11 +285,12 @@ class AttributeParser:
 
         j = match.end()
 
-        self.handle_curly_two_hash(tag, attributes, props)
+        self.handle_starttag_curly_two_hash(tag, attributes, props)
 
         return j
 
     def parse_curly_two_slash(self, i):
+        # handlebars/mustache endloop {{#name attributes}}{{/name}}
         rawdata = self.rawdata
         props = []
         match = curly_two_slash.match(rawdata, i)
@@ -298,7 +309,7 @@ class AttributeParser:
 
         j = match.end()
 
-        self.handle_curly_two_slash(tag, props)
+        self.handle_endtag_curly_two_slash(tag, props)
 
         return j
 
@@ -319,6 +330,7 @@ class AttributeParser:
         return j
 
     def parse_curly_four_slash(self, i):
+        # handlebars raw close {{{{raw}}}}{{{{/raw}}}}
         rawdata = self.rawdata
         props = []
         match = curly_four_slash.match(rawdata, i)
@@ -338,10 +350,11 @@ class AttributeParser:
 
         attrs = match.group(2).strip()
 
-        self.handle_curly_four_slash(tag, attrs, props)
+        self.handle_endtag_curly_four_slash(tag, attrs, props)
         return j
 
     def parse_curly_three(self, i):
+        # handlebars un-escaped html
         rawdata = self.rawdata
 
         match = curly_three.match(rawdata, i)
@@ -355,6 +368,7 @@ class AttributeParser:
         return j
 
     def parse_curly_four(self, i):
+        # handlebars raw open {{{{raw}}}}{{{{/raw}}}}
         rawdata = self.rawdata
         props = []
         match = curly_four.match(rawdata, i)
@@ -374,8 +388,7 @@ class AttributeParser:
         j = match.end()
 
         attrs = match.group(2).strip()
-
-        self.handle_curly_four(tag, attrs, props)
+        self.handle_starttag_curly_four(tag, attrs, props)
         return j
 
     def parse_curly_two(self, i):
@@ -408,7 +421,7 @@ class AttributeParser:
         while j < n:
             c = rawdata[j]
 
-            if c == "{" or c == "\\":
+            if c in ["{", "\\"]:
                 startswith = rawdata.startswith
 
                 if (
@@ -456,34 +469,54 @@ class AttributeParser:
         return j
 
     # place holders
-    def handle_curly_perc(self, tag, attrs, props):
+    def handle_starttag_curly_perc(self, tag, attrs, props):
         pass
 
-    def handle_curly_hash(self, value):
+    def handle_endtag_curly_perc(self, tag, attrs, props):
         pass
 
-    def handle_curly_two_exclaim(self, value, props):
+    def handle_starttag_comment_curly_perc(self, tag, attrs, props):
+        # django multi line comment {% comment %}{% endcomment %}
         pass
 
-    def handle_at_star(self, value):
+    def handle_endtag_comment_curly_perc(self, tag, attrs, props):
+        # django multi line comment {% comment %}{% endcomment %}
         pass
 
-    def handle_curly_two_hash(self, tag, attrs, props):
+    def handle_comment_curly_hash(self, value):
+        # django/jinja comment
         pass
 
-    def handle_curly_two_slash(self, tag, props):
+    def handle_comment_curly_two_exclaim(self, value, props):
+        # handlebars comment
+        pass
+
+    def handle_comment_at_star(self, value):
+        # c# razor pages comment
+        pass
+
+    def handle_starttag_curly_two_hash(self, tag, attrs, props):
+        # handlebars/mustache loop {{#name attributes}}{{/name}}
+        pass
+
+    def handle_endtag_curly_two_slash(self, tag, props):
+        # handlebars/mustache loop {{#name attributes}}{{/name}}
         pass
 
     def handle_slash_curly_two(self, tag, attrs):
+        # handlebars/mustache inline raw block
         pass
 
-    def handle_curly_four_slash(self, tag, attrs, props):
+    def handle_endtag_curly_four_slash(self, tag, attrs, props):
+        # handlebars raw close {{{{raw}}}}{{{{/raw}}}}
         pass
 
-    def handle_curly_four(self, tag, attrs, props):
+    def handle_starttag_curly_four(self, tag, attrs, props):
+        # handlebars raw close {{{{raw}}}}{{{{/raw}}}}
         pass
 
     def handle_curly_three(self, value):
+        # handlebars un-escaped html
         pass
 
     def handle_curly_two(self, tag, attrs, props):
