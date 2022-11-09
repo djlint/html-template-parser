@@ -205,16 +205,16 @@ class AttributeParser:
         attributes = match.group(3).strip() if match.group(3) else None
 
         if self.__element_text.startswith("{%-"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-dash")
 
         if self.__element_text.endswith("-%}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-dash")
 
         if self.__element_text.startswith("{%+"):
-            props.append("disable-spaceless-left")
+            props.append("spaceless-left-plus")
 
         if self.__element_text.endswith("+%}"):
-            props.append("disable-spaceless-right")
+            props.append("spaceless-right-plus")
 
         j = match.end()
 
@@ -297,13 +297,13 @@ class AttributeParser:
         attributes = match.group(2).strip() if match.group(2) else None
 
         if self.__element_text.startswith("{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if self.__element_text.startswith("{{#>"):
             props.append("partial")
 
         if self.__element_text.endswith("~}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         j = match.end()
 
@@ -325,10 +325,10 @@ class AttributeParser:
         tag = match.group(1)
 
         if self.__element_text.startswith("{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if self.__element_text.endswith("~}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         j = match.end()
 
@@ -367,10 +367,10 @@ class AttributeParser:
         j = match.end()
 
         if self.__element_text.startswith("{{{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if self.__element_text.endswith("~}}}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         attrs = match.group(2).strip()
 
@@ -407,10 +407,10 @@ class AttributeParser:
         tag = match.group(1)
 
         if self.__element_text.startswith("{{{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if self.__element_text.endswith("~}}}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         j = match.end()
 
@@ -430,13 +430,13 @@ class AttributeParser:
         tag = match.group(1).strip()
         attributes = match.group(2).strip()
         if self.__element_text.startswith("{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if self.__element_text.startswith("{{>"):
             props.append("partial")
 
         if self.__element_text.endswith("~}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         j = match.end()
 

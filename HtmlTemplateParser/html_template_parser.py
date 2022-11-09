@@ -762,13 +762,13 @@ class Htp(_markupbase.ParserBase):
         props = []
 
         if self.__element_text.startswith("{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if self.__element_text.startswith("{{#>"):
             props.append("partial")
 
         if self.__element_text.endswith("~}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         attrs = match.group(2).strip()
 
@@ -798,10 +798,10 @@ class Htp(_markupbase.ParserBase):
         props = []
 
         if self.__element_text.startswith("{{{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if self.__element_text.endswith("~}}}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         attrs = match.group(2).strip()
 
@@ -829,16 +829,16 @@ class Htp(_markupbase.ParserBase):
         self.__element_text = rawdata[i:endpos]
 
         if self.__element_text.startswith("{%-"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-dash")
 
         if self.__element_text.endswith("-%}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-dash")
 
         if self.__element_text.startswith("{%+"):
-            props.append("disable-spaceless-left")
+            props.append("spaceless-left-plus")
 
         if self.__element_text.endswith("+%}"):
-            props.append("diable-spaceless-right")
+            props.append("spaceless-right-plus")
 
         tag = match.group(1)
         self.lasttag = tag.lower()
@@ -899,13 +899,13 @@ class Htp(_markupbase.ParserBase):
             props.append("safe-right")
 
         if tag_text.startswith("{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if tag_text.startswith("{{>"):
             props.append("partial")
 
         if tag_text.endswith("~}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         self.handle_curly_two(tag.strip(), attrs, props)
 
@@ -1033,7 +1033,7 @@ class Htp(_markupbase.ParserBase):
         props = []
 
         if rawdata[i:].startswith("{%-"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-dash")
 
         assert rawdata[i : i + 2] == "{%", "unexpected call to parse_endtag"
 
@@ -1043,7 +1043,7 @@ class Htp(_markupbase.ParserBase):
             return -1
 
         if rawdata[i:].endswith("-%}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-dash")
 
         attrs = match.group(2).strip()
         j = match.end()
@@ -1077,10 +1077,10 @@ class Htp(_markupbase.ParserBase):
         self.__element_text = rawdata[i:endpos]
 
         if tag_text.startswith("{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if tag_text.endswith("~}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         self.handle_endtag_curly_two_slash(tag, props)
 
@@ -1106,10 +1106,10 @@ class Htp(_markupbase.ParserBase):
         self.__element_text = rawdata[i:endpos]
 
         if tag_text.startswith("{{{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if tag_text.endswith("~}}}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         attrs = match.group(2).strip()
 
@@ -1280,10 +1280,10 @@ class Htp(_markupbase.ParserBase):
             props.append("safe-right")
 
         if tag_text.startswith("{{~"):
-            props.append("spaceless-left")
+            props.append("spaceless-left-tilde")
 
         if tag_text.endswith("~}}"):
-            props.append("spaceless-right")
+            props.append("spaceless-right-tilde")
 
         j = match.end()
 
