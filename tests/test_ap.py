@@ -250,6 +250,101 @@ class AttributeCaseBase(TestCaseBase):
             ],
         )
 
+    def test_partial(self):
+        self._run_check(
+            "{{> myPartial }}", [("curly_two", "myPartial", "", ["partial"])]
+        )
+        self._run_check(
+            "{{> (whichPartial) }}", [("curly_two", "(whichPartial)", "", ["partial"])]
+        )
+        self._run_check(
+            "{{> (lookup . 'myVariable') }}",
+            [("curly_two", "(lookup", ". 'myVariable')", ["partial"])],
+        )
+        self._run_check(
+            "{{> myPartial myOtherContext }}",
+            [("curly_two", "myPartial", "myOtherContext", ["partial"])],
+        )
+        self._run_check(
+            "{{> myPartial parameter=favoriteNumber }}",
+            [("curly_two", "myPartial", "parameter=favoriteNumber", ["partial"])],
+        )
+        self._run_check(
+            """{{#each people}}
+  {{> myPartial prefix=../prefix firstname=firstname lastname=lastname}}.
+{{/each}}""",
+            [
+                ("starttag_curly_two_hash", "each", "people", []),
+                "space",
+                (
+                    "curly_two",
+                    "myPartial",
+                    "prefix=../prefix firstname=firstname lastname=lastname",
+                    ["partial"],
+                ),
+                ("name", ".", []),
+                "space",
+                ("endtag_curly_two_slash", "each", []),
+            ],
+        )
+        self._run_check(
+            """{{#> myPartial }}
+  Failover content
+{{/myPartial}}""",
+            [
+                ("starttag_curly_two_hash", "myPartial", "", ["partial"]),
+                "space",
+                ("name", "Failover", []),
+                "space",
+                ("name", "content", []),
+                "space",
+                ("endtag_curly_two_slash", "myPartial", []),
+            ],
+        )
+
+        self._run_check(
+            """{{#each people as |person|}}
+  {{#> childEntry}}
+    {{person.firstname}}
+  {{/childEntry}}
+{{/each}}""",
+            [
+                ("starttag_curly_two_hash", "each", "people as |person|", []),
+                "space",
+                ("starttag_curly_two_hash", "childEntry", None, ["partial"]),
+                "space",
+                ("curly_two", "person.firstname", "", []),
+                "space",
+                ("endtag_curly_two_slash", "childEntry", []),
+                "space",
+                ("endtag_curly_two_slash", "each", []),
+            ],
+        )
+
+        self._run_check(
+            """{{#*inline "myPartial"}}
+  My Content
+{{/inline}}
+{{#each people}}
+  {{> myPartial}}
+{{/each}}""",
+            [
+                ("starttag_curly_two_hash", "*inline", '"myPartial"', []),
+                "space",
+                ("name", "My", []),
+                "space",
+                ("name", "Content", []),
+                "space",
+                ("endtag_curly_two_slash", "inline", []),
+                "space",
+                ("starttag_curly_two_hash", "each", "people", []),
+                "space",
+                ("curly_two", "myPartial", "", ["partial"]),
+                "space",
+                ("endtag_curly_two_slash", "each", []),
+            ],
+        )
+
     def test_nested_if_for(self):
         self._run_check(
             """

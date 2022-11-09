@@ -46,7 +46,12 @@ from HtmlTemplateParser import AttributeParser
 class MyAttributeParser(AttributeParser):
     def handle_starttag_curly_perc(self, tag, attrs, props):
         print("starttag_curly_perc", tag, attrs, props)
+
+        # get the position of the element relative to the original html
         print(self.getpos())
+
+        # get the original html text
+        print(self.get_element_text())
 
     def handle_endtag_curly_perc(self, tag, attrs, props):
         print("endtag_curly_perc", tag, attrs, props)
@@ -113,7 +118,7 @@ parser.feed('<html><head><title>Test</title></head>'
 
 ### Modifiers
 
-Modifiers such as `~`, `!--`, `-`, `+` will show up as props on the tags.
+Modifiers such as `~`, `!--`, `-`, `+`, `>` will show up as props on the tags.
 
 ### Attributes
 

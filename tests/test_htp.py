@@ -120,7 +120,7 @@ class EventCollector(Htp):
 class EventCollectorExtra(EventCollector):
     def handle_starttag(self, tag, attrs, props):
         EventCollector.handle_starttag(self, tag, attrs, props)
-        self.append(("starttag_text", self.get_starttag_text()))
+        self.append(("starttag_text", self.get_element_text()))
 
 
 class EventCollectorCharrefs(EventCollector):
@@ -197,19 +197,19 @@ text
                 ("data", "\n"),
                 ("decl", "DOCTYPE html PUBLIC 'foo'"),
                 ("data", "\n"),
-                ("starttag", "html", "", []),
+                ("starttag", "HTML", "", []),
                 ("entityref", "entity"),
                 ("charref", "32"),
                 ("data", "\n"),
                 ("comment", "comment1a\n-></foo><bar>&lt;<?pi?></foo<bar\ncomment1b"),
                 ("data", "\n"),
-                ("starttag", "img", "sRc='Bar' isMAP", []),
+                ("starttag", "Img", "sRc='Bar' isMAP", []),
                 ("data", "sample\ntext\n"),
                 ("charref", "x201C"),
                 ("data", "\n"),
                 ("comment", "comment2a-- --comment2b"),
                 ("data", "\n"),
-                ("endtag", "html"),
+                ("endtag", "Html"),
                 ("data", "\n"),
             ],
         )
@@ -420,7 +420,7 @@ text
         elements = ["script", "style", "SCRIPT", "STYLE", "Script", "Style"]
         for content in contents:
             for element in elements:
-                element_lower = element.lower()
+                element_lower = element
                 s = "<{element}>{content}</{element}>".format(
                     element=element, content=content
                 )
@@ -453,7 +453,7 @@ text
             "script\n",
             "\nscript\n",
         ]:
-            element_lower = element.lower().strip()
+            element_lower = element.strip()
             s = f"<script>{content}</{element}>"
             self._run_check(
                 s,
@@ -1064,6 +1064,92 @@ text
         )
         self._run_check(
             "' {% ok %}", [("data", "' "), ("starttag_curly_perc", "ok", "", [])]
+        )
+
+    def test_partial(self):
+        self._run_check(
+            "{{> myPartial }}", [("curly_two", "myPartial", "", ["partial"])]
+        )
+        self._run_check(
+            "{{> (whichPartial) }}", [("curly_two", "(whichPartial)", "", ["partial"])]
+        )
+        self._run_check(
+            "{{> (lookup . 'myVariable') }}",
+            [("curly_two", "(lookup", ". 'myVariable')", ["partial"])],
+        )
+        self._run_check(
+            "{{> myPartial myOtherContext }}",
+            [("curly_two", "myPartial", "myOtherContext", ["partial"])],
+        )
+        self._run_check(
+            "{{> myPartial parameter=favoriteNumber }}",
+            [("curly_two", "myPartial", "parameter=favoriteNumber", ["partial"])],
+        )
+        self._run_check(
+            """{{#each people}}
+  {{> myPartial prefix=../prefix firstname=firstname lastname=lastname}}.
+{{/each}}""",
+            [
+                ("starttag_curly_two_hash", "each", "people", []),
+                ("data", "\n  "),
+                (
+                    "curly_two",
+                    "myPartial",
+                    "prefix=../prefix firstname=firstname lastname=lastname",
+                    ["partial"],
+                ),
+                ("data", ".\n"),
+                ("curly_two_slash", "each", []),
+            ],
+        )
+        self._run_check(
+            """{{#> myPartial }}
+  Failover content
+{{/myPartial}}""",
+            [
+                ("starttag_curly_two_hash", "myPartial", "", ["partial"]),
+                ("data", "\n  Failover content\n"),
+                ("curly_two_slash", "myPartial", []),
+            ],
+        )
+
+        self._run_check(
+            """{{#each people as |person|}}
+  {{#> childEntry}}
+    {{person.firstname}}
+  {{/childEntry}}
+{{/each}}""",
+            [
+                ("starttag_curly_two_hash", "each", "people as |person|", []),
+                ("data", "\n  "),
+                ("starttag_curly_two_hash", "childEntry", "", ["partial"]),
+                ("data", "\n    "),
+                ("curly_two", "person.firstname", "", []),
+                ("data", "\n  "),
+                ("curly_two_slash", "childEntry", []),
+                ("data", "\n"),
+                ("curly_two_slash", "each", []),
+            ],
+        )
+
+        self._run_check(
+            """{{#*inline "myPartial"}}
+  My Content
+{{/inline}}
+{{#each people}}
+  {{> myPartial}}
+{{/each}}""",
+            [
+                ("starttag_curly_two_hash", "*inline", '"myPartial"', []),
+                ("data", "\n  My Content\n"),
+                ("curly_two_slash", "inline", []),
+                ("data", "\n"),
+                ("starttag_curly_two_hash", "each", "people", []),
+                ("data", "\n  "),
+                ("curly_two", "myPartial", "", ["partial"]),
+                ("data", "\n"),
+                ("curly_two_slash", "each", []),
+            ],
         )
 
 
