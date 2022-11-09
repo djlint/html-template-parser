@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "html-template-parser"
-version = "1.4.0"
+version = "1.5.0"
 description = "A parser for HTML templates."
 authors = ["Christopher Pickering <cpickering@rhc.net>"]
 license = "GPL-3.0-or-later"
