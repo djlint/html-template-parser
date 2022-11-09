@@ -41,14 +41,24 @@ class AttributeParser:
 
     Usage:
 
-    AttributeParser(attributes).parse()
+    p = AttributeParser()
+    p.feed(data)
+    p.close()
     """
 
-    def __init__(self, rawdata):
+    def __init__(self):
         """Set up class stuff."""
-        self.rawdata = rawdata
+        self.reset()
+
+    def reset(self):
         self.lineno = 1
         self.offset = 0
+        self.rawdata = ""
+
+    def feed(self, data):
+        """Send attributes to the parser."""
+        self.rawdata = data
+        self.parse()
 
     def updatepos(self, i, j):
         if i >= j:
@@ -549,9 +559,6 @@ class AttributeParser:
         pass
 
     def handle_name(self, name, props):
-        pass
-
-    def handle_value(self, value):
         pass
 
     def handle_value_start(self):

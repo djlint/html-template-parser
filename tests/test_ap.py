@@ -84,12 +84,12 @@ class EventCollector(AttributeParser):
 
 
 class TestCaseBase(unittest.TestCase):
-    def get_collector(self, source):
-        return EventCollector(source)
+    def get_collector(self):
+        return EventCollector()
 
     def _run_check(self, source, expected_events):
-        parser = self.get_collector(source)
-        parser.parse()
+        parser = self.get_collector()
+        parser.feed(source)
 
         events = parser.get_events()
         if events != expected_events:
