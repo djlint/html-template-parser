@@ -279,7 +279,7 @@ text
         self._run_check("""<a b='{%'>""", [("starttag", "a", "b='{%'", [])])
         self._run_check(
             """{% a b=<-%}""",
-            [("starttag_curly_perc", "a", "b=<", ["spaceless-right"])],
+            [("starttag_curly_perc", "a", "b=<", ["spaceless-right-dash"])],
         )
         self._run_check("""{{ a %}}}""", [("curly_two", "a", "%", []), ("data", "}")])
         self._run_check(
@@ -289,7 +289,14 @@ text
         self._run_check("""{{{ a <a }}}>""", [("curly_three", "a <a"), ("data", ">")])
         self._run_check(
             """{{~#if test {# wow #} }}""",
-            [("starttag_curly_two_hash", "if", "test {# wow #}", ["spaceless-left"])],
+            [
+                (
+                    "starttag_curly_two_hash",
+                    "if",
+                    "test {# wow #}",
+                    ["spaceless-left-tilde"],
+                )
+            ],
         )
         self._run_check(
             """\\{{escaped <a }}>""",
@@ -507,15 +514,15 @@ text
         html = "{% if this %}{% endif -%}"
         expected = [
             ("starttag_curly_perc", "if", "this", []),
-            ("endtag_curly_perc", "if", "", ["spaceless-right"]),
+            ("endtag_curly_perc", "if", "", ["spaceless-right-dash"]),
         ]
         self._run_check(html, expected)
 
     def test_tag_curly_perc_if_else(self):
         html = "{%- if this %}{%else -%}{% endif %}"
         expected = [
-            ("starttag_curly_perc", "if", "this", ["spaceless-left"]),
-            ("starttag_curly_perc", "else", "", ["spaceless-right"]),
+            ("starttag_curly_perc", "if", "this", ["spaceless-left-dash"]),
+            ("starttag_curly_perc", "else", "", ["spaceless-right-dash"]),
             ("endtag_curly_perc", "if", "", []),
         ]
         self._run_check(html, expected)
@@ -905,7 +912,7 @@ text
                     "starttag_curly_perc",
                     "url",
                     '"tag:tag" pk=a.B.c 123',
-                    ["spaceless-left", "spaceless-right"],
+                    ["spaceless-left-dash", "spaceless-right-dash"],
                 ),
                 ("data", "\n"),
                 ("endtag_curly_four", "raw", "", []),
@@ -943,13 +950,22 @@ text
             """,
             [
                 ("data", "\n            "),
-                ("starttag_curly_two_hash", "if", "test", ["spaceless-left"]),
+                ("starttag_curly_two_hash", "if", "test", ["spaceless-left-tilde"]),
                 ("data", "\n      "),
-                ("curly_two", "title", "", ["spaceless-left"]),
+                ("curly_two", "title", "", ["spaceless-left-tilde"]),
                 ("data", "\n    "),
-                ("curly_two", "^", "", ["spaceless-left", "spaceless-right"]),
+                (
+                    "curly_two",
+                    "^",
+                    "",
+                    ["spaceless-left-tilde", "spaceless-right-tilde"],
+                ),
                 ("data", "\n      Empty\n    "),
-                ("curly_two_slash", "if", ["spaceless-left", "spaceless-right"]),
+                (
+                    "curly_two_slash",
+                    "if",
+                    ["spaceless-left-tilde", "spaceless-right-tilde"],
+                ),
                 ("data", "\n            "),
             ],
         )
