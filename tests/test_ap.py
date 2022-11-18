@@ -518,3 +518,25 @@ class AttributeCaseBase(TestCaseBase):
             "' {% ok %}",
             ["value start/end", "space", ("starttag_curly_perc", "ok", "", [])],
         )
+
+    def test_alpine(self):
+        self._run_check(
+            """x-data="{key:' value',message:'hello <b>world</b> '}""",
+            [
+                ("name", "x-data", ["has-value"]),
+                "value start/end",
+                ("name", "{key:", []),
+                "value start/end",
+                "space",
+                ("name", "value", []),
+                "value start/end",
+                ("name", ",message:", []),
+                "value start/end",
+                ("name", "hello", []),
+                "space",
+                ("name", "<b>world</b>", []),
+                "space",
+                "value start/end",
+                ("name", "}", []),
+            ],
+        )
