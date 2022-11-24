@@ -440,6 +440,35 @@ text
                     ],
                 )
 
+    def test_cdata_more(self):
+        html = (
+            "<span><![CDATA[<sender>John Smith</sender>]]></span>\n"
+            "<span><![CDATA[1]]> a <![CDATA[2]]></span>\n"
+            "<span><![CDATA[1]]> <br> <![CDATA[2]]></span>\n"
+        )
+        expected = [
+            ("starttag", "span", "", []),
+            ("unknown decl", "CDATA[<sender>John Smith</sender>"),
+            ("endtag", "span"),
+            ("data", "\n"),
+            ("starttag", "span", "", []),
+            ("unknown decl", "CDATA[1"),
+            ("data", " a "),
+            ("unknown decl", "CDATA[2"),
+            ("endtag", "span"),
+            ("data", "\n"),
+            ("starttag", "span", "", []),
+            ("unknown decl", "CDATA[1"),
+            ("data", " "),
+            ("starttag", "br", "", []),
+            ("data", " "),
+            ("unknown decl", "CDATA[2"),
+            ("endtag", "span"),
+            ("data", "\n"),
+        ]
+
+        self._run_check(html, expected)
+
     def test_cdata_with_closing_tags(self):
         # see issue #13358
         # make sure that Htp calls handle_data only once for each CDATA.

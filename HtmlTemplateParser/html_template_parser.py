@@ -1207,14 +1207,15 @@ class Htp(_markupbase.ParserBase):
     def parse_marked_section(self, i, report=1):
         self.__element_text = None
         rawdata = self.rawdata
+
         assert rawdata[i : i + 3] == "<![", "unexpected call to parse_marked_section()"
         sectName, j = self._scan_name(i + 3, i)
         if j < 0:
             return j
-        if sectName in {"temp", "cdata", "ignore", "include", "rcdata"}:
+        if sectName.lower() in {"temp", "cdata", "ignore", "include", "rcdata"}:
             # look for standard ]]> ending
             match = _markedsectionclose.search(rawdata, i + 3)
-        elif sectName in {"if", "else", "endif"}:
+        elif sectName.lower() in {"if", "else", "endif"}:
             # look for MS Office ]> ending
             match = _msmarkedsectionclose.search(rawdata, i + 3)
         else:
