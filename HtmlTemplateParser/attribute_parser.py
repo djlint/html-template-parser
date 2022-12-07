@@ -500,7 +500,7 @@ class AttributeParser:
         self.__element_text = match.group()
         j = match.end()
 
-        self.handle_space()
+        self.handle_space(rawdata[i:j])
 
         return j
 
@@ -564,5 +564,5 @@ class AttributeParser:
     def handle_value_start(self):
         pass
 
-    def handle_space(self):
+    def handle_space(self, value):
         pass

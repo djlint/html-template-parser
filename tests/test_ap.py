@@ -79,7 +79,7 @@ class EventCollector(AttributeParser):
     def handle_value_start(self):
         self.append("value start/end")
 
-    def handle_space(self):
+    def handle_space(self, value):
         self.append("space")
 
 
