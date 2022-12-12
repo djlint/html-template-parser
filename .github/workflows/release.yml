@@ -16,7 +16,7 @@ jobs:
       with:
         fetch-depth: 0
         persist-credentials: false
-
+    - uses: actions/setup-python@v4
     - name: Setup Poetry
       uses: snok/install-poetry@v1
 
