@@ -268,7 +268,6 @@ class Htp(_markupbase.ParserBase):
                 break
             startswith = rawdata.startswith
             if startswith("<", i):
-
                 if starttagopen.match(rawdata, i):  # < + letter
                     k = self.parse_starttag(i)
                 elif startswith("</", i):
@@ -378,7 +377,6 @@ class Htp(_markupbase.ParserBase):
                 k = self.parse_comment_curly_hash(i)
 
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("#}", i + 1)
@@ -401,7 +399,6 @@ class Htp(_markupbase.ParserBase):
                 # handlebarsjs comments
                 k = self.parse_comment_curly_two_exlaim(i)
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("}}", i + 1)
@@ -423,7 +420,6 @@ class Htp(_markupbase.ParserBase):
                 k = self.parse_comment_at_star(i)
 
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("*@", i + 1)
@@ -447,7 +443,6 @@ class Htp(_markupbase.ParserBase):
                 k = self.parse_starttag_curly_two_hash(i)
 
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("}}}}", i + 1)
@@ -470,7 +465,6 @@ class Htp(_markupbase.ParserBase):
                 # {{/ }}
                 k = self.parse_endtag_curly_two_slash(i)
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("}}", i + 1)
@@ -494,7 +488,6 @@ class Htp(_markupbase.ParserBase):
                 k = self.parse_endtag_curly_four(i)
 
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("}}}}", i + 1)
@@ -516,7 +509,6 @@ class Htp(_markupbase.ParserBase):
                 k = self.parse_starttag_curly_four(i)
 
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("}}}}", i + 1)
@@ -541,7 +533,6 @@ class Htp(_markupbase.ParserBase):
                 k = self.parse_curly_three(i)
 
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("}}", i + 1)
@@ -566,7 +557,6 @@ class Htp(_markupbase.ParserBase):
                 k = self.parse_slash_curly_two(i)
 
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("}}", i + 1)
@@ -589,7 +579,6 @@ class Htp(_markupbase.ParserBase):
                 k = self.parse_curly_two(i)
 
                 if k < 0:
-
                     if not end:
                         break
                     k = rawdata.find("}}", i + 1)
@@ -1059,7 +1048,6 @@ class Htp(_markupbase.ParserBase):
         return j
 
     def parse_endtag_curly_two_slash(self, i):
-
         self.__element_text = None
 
         rawdata = self.rawdata
@@ -1087,7 +1075,6 @@ class Htp(_markupbase.ParserBase):
         return endpos
 
     def parse_endtag_curly_four(self, i):
-
         self.__element_text = None
         rawdata = self.rawdata
 

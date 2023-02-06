@@ -133,7 +133,6 @@ class TestCaseBase(unittest.TestCase):
         parser = collector
 
         if isinstance(source, list):
-
             for s in source:
                 parser.feed(s)
 
@@ -155,7 +154,6 @@ class TestCaseBase(unittest.TestCase):
 
 class HtpTestCase(TestCaseBase):
     def test_tags(self):
-
         tags = [
             "<div <asdf'>",
             "</div>",
@@ -187,7 +185,6 @@ class HtpTestCase(TestCaseBase):
         ]
 
         for tag in tags:
-
             self._run_check(
                 tag,
                 [

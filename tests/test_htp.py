@@ -141,7 +141,6 @@ class TestCaseBase(unittest.TestCase):
         parser = collector
 
         if isinstance(source, list):
-
             for s in source:
                 parser.feed(s)
 
@@ -1201,7 +1200,6 @@ text
 class AttributesTestCase(TestCaseBase):
     # no attribute parsing happens here. all should be matching the input string.
     def test_attr_syntax(self):
-
         self._run_check(
             """<a b='v' c="v" d=v e>""", [("starttag", "a", "b='v' c=\"v\" d=v e", [])]
         )
