@@ -9,15 +9,13 @@
     ":npm",
     "npm:unpublishSafe"
   ],
-  "assignees": [
-    "christopherpickering"
-  ],
   "bumpVersion": "patch",
   "commitMessagePrefix": "chore(deps)",
   "labels": [
     "maintenance", 
     "renovate"
   ],
+  "baseBranches": ["dev"],
   "packageRules": [
     {
       "matchUpdateTypes": ["pin","digest"],
@@ -44,6 +42,6 @@
       "automerge": true
     }
   ],
-  "schedule": ["on monday before 8:00am"],
+  "schedule": ["before 10pm on Sunday"],
   "timezone": "America/Chicago"
 }

@@ -39,20 +39,20 @@ class EventCollector(Htp):
 
     # structure markup
 
-    def handle_starttag(self, tag, attrs):
-        self.append(("starttag", tag, attrs))
+    def handle_starttag(self, tag, attrs, props):
+        self.append(("starttag", tag, attrs, props))
 
     def handle_starttag_curly_perc(self, tag, attrs, props):
         self.append(("starttag_curly_perc", tag, attrs, props))
 
-    def handle_starttag_curly_hash(self, tag, attrs):
-        self.append(("starttag_curly_hash", tag, attrs))
+    def handle_starttag_curly_two_hash(self, tag, attrs, props):
+        self.append(("starttag_curly_two_hash", tag, attrs, props))
 
-    def handle_starttag_curly_four(self, tag, attrs):
-        self.append(("starttag_curly_four", tag, attrs))
+    def handle_starttag_curly_four(self, tag, attrs, props):
+        self.append(("starttag_curly_four", tag, attrs, props))
 
-    def handle_startendtag(self, tag, attrs):
-        self.append(("startendtag", tag, attrs))
+    def handle_startendtag(self, tag, attrs, props):
+        self.append(("startendtag", tag, attrs, props))
 
     def handle_endtag(self, tag):
         self.append(("endtag", tag))
@@ -63,8 +63,20 @@ class EventCollector(Htp):
     def handle_endtag_curly_hash(self, tag):
         self.append(("endtag_curly_hash", tag))
 
-    def handle_endtag_curly_four(self, tag):
-        self.append(("endtag_curly_four", tag))
+    def handle_endtag_curly_four_slash(self, tag, attrs, props):
+        self.append(("endtag_curly_four", tag, attrs, props))
+
+    def handle_curly_two(self, data, attrs, props):
+        self.append(("curly_two", data, attrs, props))
+
+    def handle_slash_curly_two(self, data, attrs):
+        self.append(("slash_curly_two", data, attrs))
+
+    def handle_curly_three(self, data):
+        self.append(("curly_three", data))
+
+    def handle_endtag_curly_two_slash(self, tag, props):
+        self.append(("curly_two_slash", tag, props))
 
     # all other markup
 
@@ -74,19 +86,16 @@ class EventCollector(Htp):
     def handle_comment_curly_hash(self, data):
         self.append(("comment_curly_hash", data))
 
-    def handle_comment_curly_exlaim(self, data):
-        self.append(("comment_curly_exlaim", data))
-
-    def handle_comment_curly_exlaim_dash(self, data):
-        self.append(("comment_curly_exlaim_dash", data))
+    def handle_comment_curly_two_exlaim(self, data, props):
+        self.append(("comment_curly_exlaim", data, props))
 
     def handle_comment_at_star(self, data):
         self.append(("comment_at_star", data))
 
-    def handle_comment_curly_perc(self, data, attrs, props):
+    def handle_starttag_comment_curly_perc(self, data, attrs, props):
         self.append(("comment_curly_perc", data, attrs, props))
 
-    def handle_comment_curly_perc_close(self, data, props):
+    def handle_endtag_comment_curly_perc(self, data, props):
         self.append(("comment_curly_perc_close", data, props))
 
     def handle_charref(self, data):
@@ -109,9 +118,9 @@ class EventCollector(Htp):
 
 
 class EventCollectorExtra(EventCollector):
-    def handle_starttag(self, tag, attrs):
-        EventCollector.handle_starttag(self, tag, attrs)
-        self.append(("starttag_text", self.get_starttag_text()))
+    def handle_starttag(self, tag, attrs, props):
+        EventCollector.handle_starttag(self, tag, attrs, props)
+        self.append(("starttag_text", self.get_element_text()))
 
 
 class EventCollectorCharrefs(EventCollector):
@@ -132,7 +141,6 @@ class TestCaseBase(unittest.TestCase):
         parser = collector
 
         if isinstance(source, list):
-
             for s in source:
                 parser.feed(s)
 
@@ -188,19 +196,19 @@ text
                 ("data", "\n"),
                 ("decl", "DOCTYPE html PUBLIC 'foo'"),
                 ("data", "\n"),
-                ("starttag", "html", []),
+                ("starttag", "HTML", "", []),
                 ("entityref", "entity"),
                 ("charref", "32"),
                 ("data", "\n"),
                 ("comment", "comment1a\n-></foo><bar>&lt;<?pi?></foo<bar\ncomment1b"),
                 ("data", "\n"),
-                ("starttag", "img", [("src", "Bar"), ("ismap", None)]),
+                ("starttag", "Img", "sRc='Bar' isMAP", []),
                 ("data", "sample\ntext\n"),
                 ("charref", "x201C"),
                 ("data", "\n"),
                 ("comment", "comment2a-- --comment2b"),
                 ("data", "\n"),
-                ("endtag", "html"),
+                ("endtag", "Html"),
                 ("data", "\n"),
             ],
         )
@@ -209,7 +217,7 @@ text
         self._run_check(
             "<p>&#bad;</p>",
             [
-                ("starttag", "p", []),
+                ("starttag", "p", "", []),
                 ("data", "&#bad;"),
                 ("endtag", "p"),
             ],
@@ -218,7 +226,7 @@ text
         self._run_check(
             ["<div>&#bad;</div>"],
             [
-                ("starttag", "div", []),
+                ("starttag", "div", "", []),
                 ("data", "&#bad;"),
                 ("endtag", "div"),
             ],
@@ -240,8 +248,8 @@ text
         self._run_check(
             "<a><b></a></b>",
             [
-                ("starttag", "a", []),
-                ("starttag", "b", []),
+                ("starttag", "a", "", []),
+                ("starttag", "b", "", []),
                 ("endtag", "a"),
                 ("endtag", "b"),
             ],
@@ -264,38 +272,61 @@ text
         )
 
     def test_starttag_end_boundary(self):
-        self._run_check("""<a b='<'>""", [("starttag", "a", [("b", "<")])])
-        self._run_check("""<a b='>'>""", [("starttag", "a", [("b", ">")])])
+        self._run_check("""<a b='<'>""", [("starttag", "a", "b='<'", [])])
+        self._run_check("""<a b='>'>""", [("starttag", "a", "b='>'", [])])
+        self._run_check("""<a b='{{'>""", [("starttag", "a", "b='{{'", [])])
+        self._run_check("""<a b='{%'>""", [("starttag", "a", "b='{%'", [])])
+        self._run_check(
+            """{% a b=<-%}""",
+            [("starttag_curly_perc", "a", "b=<", ["spaceless-right-dash"])],
+        )
+        self._run_check("""{{ a %}}}""", [("curly_two", "a", "%", []), ("data", "}")])
+        self._run_check(
+            """{{{{ a <a }}}}>""",
+            [("starttag_curly_four", "a", "<a", []), ("data", ">")],
+        )
+        self._run_check("""{{{ a <a }}}>""", [("curly_three", "a <a"), ("data", ">")])
+        self._run_check(
+            """{{~#if test {# wow #} }}""",
+            [
+                (
+                    "starttag_curly_two_hash",
+                    "if",
+                    "test {# wow #}",
+                    ["spaceless-left-tilde"],
+                )
+            ],
+        )
+        self._run_check(
+            """\\{{escaped <a }}>""",
+            [("slash_curly_two", "escaped", "<a"), ("data", ">")],
+        )
+        self._run_check(
+            """{{#each {%}}%}""",
+            [("starttag_curly_two_hash", "each", "{%", []), ("data", "%}")],
+        )
+        self._run_check("""@*<a*@>""", [("comment_at_star", "<a"), ("data", ">")])
+        self._run_check("""{#<a#}>""", [("comment_curly_hash", "<a"), ("data", ">")])
+        self._run_check(
+            """{{!<a}}>""", [("comment_curly_exlaim", "<a", []), ("data", ">")]
+        )
+        self._run_check("""{{/<a}}>""", [("curly_two_slash", "<a", []), ("data", ">")])
+        self._run_check(
+            """{{{{/<a}}}}>""", [("endtag_curly_four", "<a", "", []), ("data", ">")]
+        )
+        self._run_check(
+            """{{ "}}" }}""", [("curly_two", '"', "", []), ("data", '" }}')]
+        )
 
     def test_buffer_artefacts(self):
-        output = [("starttag", "a", [("b", "<")])]
+        output = [("starttag", "a", "b='<'", [])]
         self._run_check(["<a b='<'>"], output)
-        self._run_check(["<a ", "b='<'>"], output)
-        self._run_check(["<a b", "='<'>"], output)
-        self._run_check(["<a b=", "'<'>"], output)
-        self._run_check(["<a b='<", "'>"], output)
-        self._run_check(["<a b='<'", ">"], output)
 
-        output = [("starttag", "a", [("b", ">")])]
+        output = [("starttag", "a", "b='>'", [])]
         self._run_check(["<a b='>'>"], output)
-        self._run_check(["<a ", "b='>'>"], output)
-        self._run_check(["<a b", "='>'>"], output)
-        self._run_check(["<a b=", "'>'>"], output)
-        self._run_check(["<a b='>", "'>"], output)
-        self._run_check(["<a b='>'", ">"], output)
 
         output = [("comment", "abc")]
-        self._run_check(["", "<!--abc-->"], output)
-        self._run_check(["<", "!--abc-->"], output)
-        self._run_check(["<!", "--abc-->"], output)
-        self._run_check(["<!-", "-abc-->"], output)
-        self._run_check(["<!--", "abc-->"], output)
-        self._run_check(["<!--a", "bc-->"], output)
-        self._run_check(["<!--ab", "c-->"], output)
-        self._run_check(["<!--abc", "-->"], output)
-        self._run_check(["<!--abc-", "->"], output)
-        self._run_check(["<!--abc--", ">"], output)
-        self._run_check(["<!--abc-->", ""], output)
+        self._run_check(["<!--abc-->"], output)
 
     def test_valid_doctypes(self):
         # from http://www.w3.org/QA/2002/04/valid-dtd-list.html
@@ -340,21 +371,21 @@ text
         self._run_check(
             "<p/>",
             [
-                ("startendtag", "p", []),
+                ("startendtag", "p", "", ["is-selfclosing"]),
             ],
         )
         self._run_check(
             "<p></p>",
             [
-                ("starttag", "p", []),
+                ("starttag", "p", "", []),
                 ("endtag", "p"),
             ],
         )
         self._run_check(
             "<p><img src='foo' /></p>",
             [
-                ("starttag", "p", []),
-                ("startendtag", "img", [("src", "foo")]),
+                ("starttag", "p", "", []),
+                ("startendtag", "img", "src='foo'", ["is-selfclosing"]),
                 ("endtag", "p"),
             ],
         )
@@ -364,8 +395,8 @@ text
         self._run_check_extra(
             s,
             [
-                ("starttag", "foo:bar", [("one", "1"), ("two", "2")]),
-                ("starttag_text", s),
+                ("starttag", "foo:bar", 'one="1"\ttwo=2', []),
+                ("starttag_text", '<foo:bar   \n   one="1"\ttwo=2   >'),
             ],
         )
 
@@ -395,18 +426,47 @@ text
         elements = ["script", "style", "SCRIPT", "STYLE", "Script", "Style"]
         for content in contents:
             for element in elements:
-                element_lower = element.lower()
+                element_lower = element
                 s = "<{element}>{content}</{element}>".format(
                     element=element, content=content
                 )
                 self._run_check(
                     s,
                     [
-                        ("starttag", element_lower, []),
+                        ("starttag", element_lower, "", []),
                         ("data", content),
                         ("endtag", element_lower),
                     ],
                 )
+
+    def test_cdata_more(self):
+        html = (
+            "<span><![CDATA[<sender>John Smith</sender>]]></span>\n"
+            "<span><![CDATA[1]]> a <![CDATA[2]]></span>\n"
+            "<span><![CDATA[1]]> <br> <![CDATA[2]]></span>\n"
+        )
+        expected = [
+            ("starttag", "span", "", []),
+            ("unknown decl", "CDATA[<sender>John Smith</sender>"),
+            ("endtag", "span"),
+            ("data", "\n"),
+            ("starttag", "span", "", []),
+            ("unknown decl", "CDATA[1"),
+            ("data", " a "),
+            ("unknown decl", "CDATA[2"),
+            ("endtag", "span"),
+            ("data", "\n"),
+            ("starttag", "span", "", []),
+            ("unknown decl", "CDATA[1"),
+            ("data", " "),
+            ("starttag", "br", "", []),
+            ("data", " "),
+            ("unknown decl", "CDATA[2"),
+            ("endtag", "span"),
+            ("data", "\n"),
+        ]
+
+        self._run_check(html, expected)
 
     def test_cdata_with_closing_tags(self):
         # see issue #13358
@@ -428,12 +488,12 @@ text
             "script\n",
             "\nscript\n",
         ]:
-            element_lower = element.lower().strip()
+            element_lower = element.strip()
             s = f"<script>{content}</{element}>"
             self._run_check(
                 s,
                 [
-                    ("starttag", element_lower, []),
+                    ("starttag", element_lower, "", []),
                     ("data", content),
                     ("endtag", element_lower),
                 ],
@@ -465,14 +525,14 @@ text
             ("comment", " I have a > in the middle "),
             ("comment", " and I have -- in the middle! "),
             ("comment_curly_hash", " comment "),
-            ("comment_curly_perc", "comment", [], []),
+            ("comment_curly_perc", "comment", "", []),
             ("data", " something?"),
             ("comment_curly_perc_close", "comment", []),
-            ("comment_curly_perc", "comment", ['"asdf"'], []),
+            ("comment_curly_perc", "comment", '"asdf"', []),
             ("data", "no"),
             ("comment_curly_perc_close", "comment", []),
-            ("comment_curly_exlaim", " handlebars are cool "),
-            ("comment_curly_exlaim_dash", " even better "),
+            ("comment_curly_exlaim", " handlebars are cool ", []),
+            ("comment_curly_exlaim", " even better ", ["safe-left"]),
             ("comment_at_star", " razor "),
         ]
 
@@ -481,40 +541,41 @@ text
     def test_tag_curly_perc_if(self):
         html = "{% if this %}{% endif -%}"
         expected = [
-            ("starttag_curly_perc", "if", ["this"], []),
-            ("endtag_curly_perc", "if", [], ["spaceless-right"]),
+            ("starttag_curly_perc", "if", "this", []),
+            ("endtag_curly_perc", "if", "", ["spaceless-right-dash"]),
         ]
         self._run_check(html, expected)
 
     def test_tag_curly_perc_if_else(self):
         html = "{%- if this %}{%else -%}{% endif %}"
         expected = [
-            ("starttag_curly_perc", "if", ["this"], ["spaceless-left"]),
-            ("starttag_curly_perc", "else", [], ["spaceless-right"]),
-            ("endtag_curly_perc", "if", [], []),
+            ("starttag_curly_perc", "if", "this", ["spaceless-left-dash"]),
+            ("starttag_curly_perc", "else", "", ["spaceless-right-dash"]),
+            ("endtag_curly_perc", "if", "", []),
         ]
         self._run_check(html, expected)
 
     def test_curly_block(self):
         html = "{% block cool %}{% endblock cool%}"
         expected = [
-            ("starttag_curly_perc", "block", ["cool"], []),
-            ("endtag_curly_perc", "block", ["cool"], []),
+            ("starttag_curly_perc", "block", "cool", []),
+            ("endtag_curly_perc", "block", "cool", []),
         ]
         self._run_check(html, expected)
 
     def test_tag_curly_perc_for(self):
         html = "{% for x in range(0,10) %}{% endfor %}"
         expected = [
-            ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"], []),
-            ("endtag_curly_perc", "for", [], []),
+            ("starttag_curly_perc", "for", "x in range(0,10)", []),
+            ("endtag_curly_perc", "for", "", []),
         ]
         self._run_check(html, expected)
 
-        html = "{% for x in range(0,10) %}{{ x | length }}{% endfor %}"
+        html = "{% for x in range(0,10) %}{{ x|length }}{% endfor %}"
         expected = [
-            ("starttag_curly_perc", "for", ["x", "in", "range(0,10)"], []),
-            ("endtag_curly_perc", "for", [], []),
+            ("starttag_curly_perc", "for", "x in range(0,10)", []),
+            ("curly_two", "x", "|length", []),
+            ("endtag_curly_perc", "for", "", []),
         ]
         self._run_check(html, expected)
 
@@ -546,30 +607,32 @@ text
 
     def test_convert_charrefs(self):
         # default value for convert_charrefs is now True
-        collector = lambda: EventCollectorCharrefs()
+        collector = lambda: EventCollectorCharrefs()  # noqa: E731
         self.assertTrue(collector().convert_charrefs)
         charrefs = ["&quot;", "&#34;", "&#x22;", "&quot", "&#34", "&#x22"]
         # check charrefs in the middle of the text/attributes
-        expected = [
-            ("starttag", "a", [("href", 'foo"zar')]),
-            ("data", 'a"z'),
-            ("endtag", "a"),
-        ]
+
         for charref in charrefs:
+            expected = [
+                ("starttag", "a", f'href="foo{charref}zar"', []),
+                ("data", 'a"z'),
+                ("endtag", "a"),
+            ]
             self._run_check(
                 '<a href="foo{0}zar">a{0}z</a>'.format(charref),
                 expected,
                 collector=collector(),
             )
         # check charrefs at the beginning/end of the text/attributes
-        expected = [
-            ("data", '"'),
-            ("starttag", "a", [("x", '"'), ("y", '"X'), ("z", 'X"')]),
-            ("data", '"'),
-            ("endtag", "a"),
-            ("data", '"'),
-        ]
+
         for charref in charrefs:
+            expected = [
+                ("data", '"'),
+                ("starttag", "a", f'x="{charref}" y="{charref}X" z="X{charref}"', []),
+                ("data", '"'),
+                ("endtag", "a"),
+                ("data", '"'),
+            ]
             self._run_check(
                 '{0}<a x="{0}" y="{0}X" z="X{0}">' "{0}</a>{0}".format(charref),
                 expected,
@@ -580,11 +643,11 @@ text
             text = "X".join([charref] * 3)
             expected = [
                 ("data", '"'),
-                ("starttag", "script", []),
+                ("starttag", "script", "", []),
                 ("data", text),
                 ("endtag", "script"),
                 ("data", '"'),
-                ("starttag", "style", []),
+                ("starttag", "style", "", []),
                 ("data", text),
                 ("endtag", "style"),
                 ("data", '"'),
@@ -611,13 +674,14 @@ text
             "<html <html>te>>xt&a<<bc</a></html>\n"
             '<img src="URL><//img></html</html>',
             [
-                ("starttag", "html", [("<html", None)]),
+                ("starttag", "html", "<html", []),
                 ("data", "te>>xt"),
                 ("entityref", "a"),
                 ("data", "<"),
-                ("starttag", "bc<", [("a", None)]),
+                ("starttag", "bc<", "/a", []),
                 ("endtag", "html"),
-                ("data", '\n<img src="URL>'),
+                ("data", "\n"),
+                ("starttag", "img", 'src="URL', []),
                 ("comment", "/img"),
                 ("endtag", "html<"),
             ],
@@ -628,22 +692,24 @@ text
         self._run_check("</$>", [("comment", "$")])
         self._run_check("</", [("data", "</")])
         self._run_check("</a", [("data", "</a")])
-        self._run_check("<a<a>", [("starttag", "a<a", [])])
+        self._run_check("<a<a>", [("starttag", "a<a", "", [])])
         self._run_check("</a<a>", [("endtag", "a<a")])
         self._run_check("<!", [("data", "<!")])
         self._run_check("<a", [("data", "<a")])
         self._run_check("<a foo='bar'", [("data", "<a foo='bar'")])
         self._run_check("<a foo='bar", [("data", "<a foo='bar")])
         self._run_check("<a foo='>'", [("data", "<a foo='>'")])
-        self._run_check("<a foo='>", [("data", "<a foo='>")])
-        self._run_check("<a$>", [("starttag", "a$", [])])
-        self._run_check("<a$b>", [("starttag", "a$b", [])])
-        self._run_check("<a$b/>", [("startendtag", "a$b", [])])
-        self._run_check("<a$b  >", [("starttag", "a$b", [])])
-        self._run_check("<a$b  />", [("startendtag", "a$b", [])])
+        self._run_check("<a foo='>", [("starttag", "a", "foo='", [])])
+        self._run_check("<a$>", [("starttag", "a$", "", [])])
+        self._run_check("<a$b>", [("starttag", "a$b", "", [])])
+        self._run_check("<a$b/>", [("startendtag", "a$b", "", ["is-selfclosing"])])
+        self._run_check("<a$b  >", [("starttag", "a$b", "", [])])
+        self._run_check("<a$b  />", [("startendtag", "a$b", "", ["is-selfclosing"])])
 
     def test_slashes_in_starttag(self):
-        self._run_check('<a foo="var"/>', [("startendtag", "a", [("foo", "var")])])
+        self._run_check(
+            '<a foo="var"/>', [("startendtag", "a", 'foo="var"', ["is-selfclosing"])]
+        )
         html = (
             "<img width=902 height=250px "
             'src="/sites/default/files/images/homepage/foo.jpg" '
@@ -653,36 +719,29 @@ text
             (
                 "startendtag",
                 "img",
-                [
-                    ("width", "902"),
-                    ("height", "250px"),
-                    ("src", "/sites/default/files/images/homepage/foo.jpg"),
-                    ("*what", None),
-                    ("am", None),
-                    ("i", None),
-                    ("doing", None),
-                    ("here*", None),
-                ],
+                'width=902 height=250px src="/sites/default/files/images/homepage/foo.jpg" '
+                "/*what am I doing here*/",
+                ["is-selfclosing"],
             )
         ]
         self._run_check(html, expected)
         html = "<a / /foo/ / /=/ / /bar/ / />" "<a / /foo/ / /=/ / /bar/ / >"
         expected = [
-            ("startendtag", "a", [("foo", None), ("=", None), ("bar", None)]),
-            ("starttag", "a", [("foo", None), ("=", None), ("bar", None)]),
+            ("startendtag", "a", "/ /foo/ / /=/ / /bar/ /", ["is-selfclosing"]),
+            ("starttag", "a", "/ /foo/ / /=/ / /bar/ /", []),
         ]
         self._run_check(html, expected)
         # see issue #14538
         html = "<meta><meta / ><meta // ><meta / / >" "<meta/><meta /><meta //><meta//>"
         expected = [
-            ("starttag", "meta", []),
-            ("starttag", "meta", []),
-            ("starttag", "meta", []),
-            ("starttag", "meta", []),
-            ("startendtag", "meta", []),
-            ("startendtag", "meta", []),
-            ("startendtag", "meta", []),
-            ("startendtag", "meta", []),
+            ("starttag", "meta", "", []),
+            ("starttag", "meta", "/", []),
+            ("starttag", "meta", "//", []),
+            ("starttag", "meta", "/ /", []),
+            ("startendtag", "meta", "", ["is-selfclosing"]),
+            ("startendtag", "meta", "", ["is-selfclosing"]),
+            ("startendtag", "meta", "/", ["is-selfclosing"]),
+            ("startendtag", "meta", "/", ["is-selfclosing"]),
         ]
         self._run_check(html, expected)
 
@@ -704,24 +763,24 @@ text
             '</li class="unit"><br></li\r\n\t\t\t\t\t\t</ul><br></><br>'
         )
         expected = [
-            ("starttag", "br", []),
+            ("starttag", "br", "", []),
             # < is part of the name, / is discarded, p is an attribute
             ("endtag", "label<"),
-            ("starttag", "br", []),
+            ("starttag", "br", "", []),
             # text and attributes are discarded
             ("endtag", "div"),
-            ("starttag", "br", []),
+            ("starttag", "br", "", []),
             # comment because the first char after </ is not a-zA-Z
             ("comment", "<h4"),
-            ("starttag", "br", []),
+            ("starttag", "br", "", []),
             # attributes are discarded
             ("endtag", "li"),
-            ("starttag", "br", []),
+            ("starttag", "br", "", []),
             # everything till ul (included) is discarded
             ("endtag", "li"),
-            ("starttag", "br", []),
+            ("starttag", "br", "", []),
             # </> is ignored
-            ("starttag", "br", []),
+            ("starttag", "br", "", []),
         ]
         self._run_check(html, expected)
 
@@ -732,7 +791,7 @@ text
         # see #13993
         html = '<b>This</b attr=">"> confuses the parser'
         expected = [
-            ("starttag", "b", []),
+            ("starttag", "b", "", []),
             ("data", "This"),
             ("endtag", "b"),
             ("data", '"> confuses the parser'),
@@ -746,16 +805,16 @@ text
             "<br /> in <span>Spain</span></b></div>"
         )
         expected = [
-            ("starttag", "div", [("style", "")]),
-            ("starttag", "b", []),
+            ("starttag", "div", 'style=""', []),
+            ("starttag", "b", "", []),
             ("data", "The "),
-            ("starttag", "a", [("href", "some_url")]),
+            ("starttag", "a", 'href="some_url"', []),
             ("data", "rain"),
             ("endtag", "a"),
             ("data", " "),
-            ("startendtag", "br", []),
+            ("startendtag", "br", "", ["is-selfclosing"]),
             ("data", " in "),
-            ("starttag", "span", []),
+            ("starttag", "span", "", []),
             ("data", "Spain"),
             ("endtag", "span"),
             ("endtag", "b"),
@@ -765,10 +824,10 @@ text
 
         html = '<div style="", foo = "bar" ><b>The <a href="some_url">rain</a>'
         expected = [
-            ("starttag", "div", [("style", ""), (",", None), ("foo", "bar")]),
-            ("starttag", "b", []),
+            ("starttag", "div", 'style="", foo = "bar"', []),
+            ("starttag", "b", "", []),
             ("data", "The "),
-            ("starttag", "a", [("href", "some_url")]),
+            ("starttag", "a", 'href="some_url"', []),
             ("data", "rain"),
             ("endtag", "a"),
         ]
@@ -825,18 +884,18 @@ text
             ("data", "broken condcom"),
             ("unknown decl", "endif"),
             ("unknown decl", "if ! IE"),
-            ("startendtag", "link", [("href", "favicon.tiff")]),
+            ("startendtag", "link", 'href="favicon.tiff"', ["is-selfclosing"]),
             ("unknown decl", "endif"),
             ("unknown decl", "if !IE 6"),
-            ("startendtag", "img", [("src", "firefox.png")]),
+            ("startendtag", "img", 'src="firefox.png"', ["is-selfclosing"]),
             ("unknown decl", "endif"),
             ("unknown decl", "if !ie 6"),
-            ("starttag", "b", []),
+            ("starttag", "b", "", []),
             ("data", "foo"),
             ("endtag", "b"),
             ("unknown decl", "endif"),
             ("unknown decl", "if (!IE)|(lt IE 9)"),
-            ("startendtag", "img", [("src", "mammoth.bmp")]),
+            ("startendtag", "img", 'src="mammoth.bmp"', ["is-selfclosing"]),
             ("unknown decl", "endif"),
         ]
         self._run_check(html, expected)
@@ -851,49 +910,331 @@ text
             parser.get_events(),
             [
                 ("data", "foo "),
-                ("starttag", "a", []),
+                ("starttag", "a", "", []),
                 ("data", "link"),
                 ("endtag", "a"),
                 ("data", " bar & baz"),
             ],
         )
 
+    def test_template_tags(self):
+        self._run_check("{# comment #}", [("comment_curly_hash", " comment ")])
+        self._run_check("{{{ stuff }}}", [("curly_three", "stuff")])
+
+    def test_handlebars_escape(self):
+        self._run_check(
+            r"""
+            \{{escaped attr}}
+{{{{raw}}}}
+  {{escaped}}data-src={%-url "tag:tag" pk=a.B.c 123    -%}
+{{{{/raw}}}}""",
+            [
+                ("data", "\n            "),
+                ("slash_curly_two", "escaped", "attr"),
+                ("data", "\n"),
+                ("starttag_curly_four", "raw", "", []),
+                ("data", "\n  "),
+                ("curly_two", "escaped", "", []),
+                ("data", "data-src="),
+                (
+                    "starttag_curly_perc",
+                    "url",
+                    '"tag:tag" pk=a.B.c 123',
+                    ["spaceless-left-dash", "spaceless-right-dash"],
+                ),
+                ("data", "\n"),
+                ("endtag_curly_four", "raw", "", []),
+            ],
+        )
+
+    def test_handlebars_if(self):
+        self._run_check(
+            """
+            {{#if test}}
+      {{title}}
+    {{^}}
+      Empty
+    {{/if}}""",
+            [
+                ("data", "\n            "),
+                ("starttag_curly_two_hash", "if", "test", []),
+                ("data", "\n      "),
+                ("curly_two", "title", "", []),
+                ("data", "\n    "),
+                ("curly_two", "^", "", []),
+                ("data", "\n      Empty\n    "),
+                ("curly_two_slash", "if", []),
+            ],
+        )
+
+    def test_handlebars_whitespace_control(self):
+        self._run_check(
+            """
+            {{~#if test}}
+      {{~title}}
+    {{~^~}}
+      Empty
+    {{~/if~}}
+            """,
+            [
+                ("data", "\n            "),
+                ("starttag_curly_two_hash", "if", "test", ["spaceless-left-tilde"]),
+                ("data", "\n      "),
+                ("curly_two", "title", "", ["spaceless-left-tilde"]),
+                ("data", "\n    "),
+                (
+                    "curly_two",
+                    "^",
+                    "",
+                    ["spaceless-left-tilde", "spaceless-right-tilde"],
+                ),
+                ("data", "\n      Empty\n    "),
+                (
+                    "curly_two_slash",
+                    "if",
+                    ["spaceless-left-tilde", "spaceless-right-tilde"],
+                ),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_handlebars_each(self):
+        self._run_check(
+            """
+            {{#each people}}
+    {{../prefix}} {{firstname}}
+{{/each}}
+            """,
+            [
+                ("data", "\n            "),
+                ("starttag_curly_two_hash", "each", "people", []),
+                ("data", "\n    "),
+                ("curly_two", "../prefix", "", []),
+                ("data", " "),
+                ("curly_two", "firstname", "", []),
+                ("data", "\n"),
+                ("curly_two_slash", "each", []),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_handlebars_expressions(self):
+        self._run_check(
+            """
+            {{person.firstname}} {{person.lastname}}
+            """,
+            [
+                ("data", "\n            "),
+                ("curly_two", "person.firstname", "", []),
+                ("data", " "),
+                ("curly_two", "person.lastname", "", []),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_handlebars_special_char(self):
+        self._run_check(
+            """
+            {{{specialChars}}}
+            """,
+            [
+                ("data", "\n            "),
+                ("curly_three", "specialChars"),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_handlebars_attributes(self):
+        self._run_check(
+            """
+            {{loud lastname}}
+            """,
+            [
+                ("data", "\n            "),
+                ("curly_two", "loud", "lastname", []),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_set(self):
+        self._run_check(
+            """
+            {% set cool=[{loud:"lastname"}] %}
+            """,
+            [
+                ("data", "\n            "),
+                ("starttag_curly_perc", "set", 'cool=[{loud:"lastname"}]', []),
+                ("data", "\n            "),
+            ],
+        )
+
+    def test_bad_stuff(self):
+        self._run_check("{% {{ ok }}", [("data", "{% "), ("curly_two", "ok", "", [])])
+        self._run_check(
+            "{# {% ok %}", [("data", "{# "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{ {% ok %}", [("data", "{{ "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{! {% ok %}", [("data", "{{! "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "@* {% ok %}", [("data", "@* "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{# {% ok %}", [("data", "{{# "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{/ {% ok %}", [("data", "{{/ "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "\\{{ {% ok %}",
+            [("data", "\\{{ "), ("starttag_curly_perc", "ok", "", [])],
+        )
+        self._run_check(
+            "{{{ {% ok %}", [("data", "{{{ "), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "{{{{ {% ok %}",
+            [("data", "{{{{ "), ("starttag_curly_perc", "ok", "", [])],
+        )
+        self._run_check(
+            "{{{{/ {% ok %}",
+            [("data", "{{{{/ "), ("starttag_curly_perc", "ok", "", [])],
+        )
+        self._run_check(
+            '" {% ok %}', [("data", '" '), ("starttag_curly_perc", "ok", "", [])]
+        )
+        self._run_check(
+            "' {% ok %}", [("data", "' "), ("starttag_curly_perc", "ok", "", [])]
+        )
+
+    def test_partial(self):
+        self._run_check(
+            "{{> myPartial }}", [("curly_two", "myPartial", "", ["partial"])]
+        )
+        self._run_check(
+            "{{> (whichPartial) }}", [("curly_two", "(whichPartial)", "", ["partial"])]
+        )
+        self._run_check(
+            "{{> (lookup . 'myVariable') }}",
+            [("curly_two", "(lookup", ". 'myVariable')", ["partial"])],
+        )
+        self._run_check(
+            "{{> myPartial myOtherContext }}",
+            [("curly_two", "myPartial", "myOtherContext", ["partial"])],
+        )
+        self._run_check(
+            "{{> myPartial parameter=favoriteNumber }}",
+            [("curly_two", "myPartial", "parameter=favoriteNumber", ["partial"])],
+        )
+        self._run_check(
+            """{{#each people}}
+  {{> myPartial prefix=../prefix firstname=firstname lastname=lastname}}.
+{{/each}}""",
+            [
+                ("starttag_curly_two_hash", "each", "people", []),
+                ("data", "\n  "),
+                (
+                    "curly_two",
+                    "myPartial",
+                    "prefix=../prefix firstname=firstname lastname=lastname",
+                    ["partial"],
+                ),
+                ("data", ".\n"),
+                ("curly_two_slash", "each", []),
+            ],
+        )
+        self._run_check(
+            """{{#> myPartial }}
+  Failover content
+{{/myPartial}}""",
+            [
+                ("starttag_curly_two_hash", "myPartial", "", ["partial"]),
+                ("data", "\n  Failover content\n"),
+                ("curly_two_slash", "myPartial", []),
+            ],
+        )
+
+        self._run_check(
+            """{{#each people as |person|}}
+  {{#> childEntry}}
+    {{person.firstname}}
+  {{/childEntry}}
+{{/each}}""",
+            [
+                ("starttag_curly_two_hash", "each", "people as |person|", []),
+                ("data", "\n  "),
+                ("starttag_curly_two_hash", "childEntry", "", ["partial"]),
+                ("data", "\n    "),
+                ("curly_two", "person.firstname", "", []),
+                ("data", "\n  "),
+                ("curly_two_slash", "childEntry", []),
+                ("data", "\n"),
+                ("curly_two_slash", "each", []),
+            ],
+        )
+
+        self._run_check(
+            """{{#*inline "myPartial"}}
+  My Content
+{{/inline}}
+{{#each people}}
+  {{> myPartial}}
+{{/each}}""",
+            [
+                ("starttag_curly_two_hash", "*inline", '"myPartial"', []),
+                ("data", "\n  My Content\n"),
+                ("curly_two_slash", "inline", []),
+                ("data", "\n"),
+                ("starttag_curly_two_hash", "each", "people", []),
+                ("data", "\n  "),
+                ("curly_two", "myPartial", "", ["partial"]),
+                ("data", "\n"),
+                ("curly_two_slash", "each", []),
+            ],
+        )
+
 
 class AttributesTestCase(TestCaseBase):
+    # no attribute parsing happens here. all should be matching the input string.
     def test_attr_syntax(self):
-        output = [("starttag", "a", [("b", "v"), ("c", "v"), ("d", "v"), ("e", None)])]
-        self._run_check("""<a b='v' c="v" d=v e>""", output)
-        self._run_check("""<a  b = 'v' c = "v" d = v e>""", output)
-        self._run_check("""<a\nb\n=\n'v'\nc\n=\n"v"\nd\n=\nv\ne>""", output)
-        self._run_check("""<a\tb\t=\t'v'\tc\t=\t"v"\td\t=\tv\te>""", output)
+        self._run_check(
+            """<a b='v' c="v" d=v e>""", [("starttag", "a", "b='v' c=\"v\" d=v e", [])]
+        )
+        self._run_check(
+            """<a  b = 'v' c = "v" d = v e>""",
+            [("starttag", "a", "b = 'v' c = \"v\" d = v e", [])],
+        )
+        self._run_check(
+            """<a\nb\n=\n'v'\nc\n=\n"v"\nd\n=\nv\ne>""",
+            [("starttag", "a", "b\n=\n'v'\nc\n=\n\"v\"\nd\n=\nv\ne", [])],
+        )
+        self._run_check(
+            """<a\tb\t=\t'v'\tc\t=\t"v"\td\t=\tv\te>""",
+            [("starttag", "a", "b\t=\t'v'\tc\t=\t\"v\"\td\t=\tv\te", [])],
+        )
 
     def test_attr_values(self):
         self._run_check(
             """<a b='xxx\n\txxx' c="yyy\t\nyyy" d='\txyz\n'>""",
-            [
-                (
-                    "starttag",
-                    "a",
-                    [("b", "xxx\n\txxx"), ("c", "yyy\t\nyyy"), ("d", "\txyz\n")],
-                )
-            ],
+            [("starttag", "a", "b='xxx\n\txxx' c=\"yyy\t\nyyy\" d='\txyz\n'", [])],
         )
-        self._run_check(
-            """<a b='' c="">""", [("starttag", "a", [("b", ""), ("c", "")])]
-        )
+        self._run_check("""<a b='' c="">""", [("starttag", "a", "b='' c=\"\"", [])])
         # Regression test for SF patch #669683.
-        self._run_check("<e a=rgb(1,2,3)>", [("starttag", "e", [("a", "rgb(1,2,3)")])])
+        self._run_check("<e a=rgb(1,2,3)>", [("starttag", "e", "a=rgb(1,2,3)", [])])
         # Regression test for SF bug #921657.
         self._run_check(
             "<a href=mailto:xyz@example.com>",
-            [("starttag", "a", [("href", "mailto:xyz@example.com")])],
+            [("starttag", "a", "href=mailto:xyz@example.com", [])],
         )
 
     def test_attr_nonascii(self):
         # see issue 7311
         self._run_check(
             "<img src=/foo/bar.png alt=\u4e2d\u6587>",
-            [("starttag", "img", [("src", "/foo/bar.png"), ("alt", "\u4e2d\u6587")])],
+            [("starttag", "img", "src=/foo/bar.png alt=\u4e2d\u6587", [])],
         )
         self._run_check(
             "<a title='\u30c6\u30b9\u30c8' href='\u30c6\u30b9\u30c8.html'>",
@@ -901,10 +1242,8 @@ class AttributesTestCase(TestCaseBase):
                 (
                     "starttag",
                     "a",
-                    [
-                        ("title", "\u30c6\u30b9\u30c8"),
-                        ("href", "\u30c6\u30b9\u30c8.html"),
-                    ],
+                    "title='\u30c6\u30b9\u30c8' href='\u30c6\u30b9\u30c8.html'",
+                    [],
                 )
             ],
         )
@@ -914,38 +1253,36 @@ class AttributesTestCase(TestCaseBase):
                 (
                     "starttag",
                     "a",
-                    [
-                        ("title", "\u30c6\u30b9\u30c8"),
-                        ("href", "\u30c6\u30b9\u30c8.html"),
-                    ],
+                    'title="\u30c6\u30b9\u30c8" href="\u30c6\u30b9\u30c8.html"',
+                    [],
                 )
             ],
         )
 
     def test_attr_entity_replacement(self):
         self._run_check(
-            "<a b='&amp;&gt;&lt;&quot;&apos;'>", [("starttag", "a", [("b", "&><\"'")])]
+            "<a b='&amp;&gt;&lt;&quot;&apos;'>",
+            [("starttag", "a", "b='&amp;&gt;&lt;&quot;&apos;'", [])],
         )
 
     def test_attr_funky_names(self):
         self._run_check(
-            "<a a.b='v' c:d=v e-f=v>",
-            [("starttag", "a", [("a.b", "v"), ("c:d", "v"), ("e-f", "v")])],
+            "<a a.b='v' c:d=v e-f=v>", [("starttag", "a", "a.b='v' c:d=v e-f=v", [])]
         )
 
     def test_entityrefs_in_attributes(self):
         self._run_check(
             "<html foo='&euro;&amp;&#97;&#x61;&unsupported;'>",
-            [("starttag", "html", [("foo", "\u20AC&aa&unsupported;")])],
+            [("starttag", "html", "foo='&euro;&amp;&#97;&#x61;&unsupported;'", [])],
         )
 
     def test_attr_funky_names2(self):
         self._run_check(
             r"<a $><b $=%><c \=/>",
             [
-                ("starttag", "a", [("$", None)]),
-                ("starttag", "b", [("$", "%")]),
-                ("starttag", "c", [("\\", "/")]),
+                ("starttag", "a", "$", []),
+                ("starttag", "b", "$=%", []),
+                ("starttag", "c", "\\=/", []),
             ],
         )
 
@@ -953,13 +1290,13 @@ class AttributesTestCase(TestCaseBase):
         # see #1200313
         for entity in ["&", "&amp;", "&#38;", "&#x26;"]:
             self._run_check(
-                '<a href="%s">' % entity, [("starttag", "a", [("href", "&")])]
+                '<a href="%s">' % entity, [("starttag", "a", f'href="{entity}"', [])]
             )
             self._run_check(
-                "<a href='%s'>" % entity, [("starttag", "a", [("href", "&")])]
+                "<a href='%s'>" % entity, [("starttag", "a", f"href='{entity}'", [])]
             )
             self._run_check(
-                "<a href=%s>" % entity, [("starttag", "a", [("href", "&")])]
+                "<a href=%s>" % entity, [("starttag", "a", f"href={entity}", [])]
             )
 
     def test_malformed_attributes(self):
@@ -971,16 +1308,16 @@ class AttributesTestCase(TestCaseBase):
             "<a href = test'&nbsp;style='color:red;bad4'  >test - bad4</a>"
         )
         expected = [
-            ("starttag", "a", [("href", "test'style='color:red;bad1'")]),
+            ("starttag", "a", "href=test'style='color:red;bad1'", []),
             ("data", "test - bad1"),
             ("endtag", "a"),
-            ("starttag", "a", [("href", "test'+style='color:red;ba2'")]),
+            ("starttag", "a", "href=test'+style='color:red;ba2'", []),
             ("data", "test - bad2"),
             ("endtag", "a"),
-            ("starttag", "a", [("href", "test'\xa0style='color:red;bad3'")]),
+            ("starttag", "a", "href=test'&nbsp;style='color:red;bad3'", []),
             ("data", "test - bad3"),
             ("endtag", "a"),
-            ("starttag", "a", [("href", "test'\xa0style='color:red;bad4'")]),
+            ("starttag", "a", "href = test'&nbsp;style='color:red;bad4'", []),
             ("data", "test - bad4"),
             ("endtag", "a"),
         ]
@@ -991,16 +1328,16 @@ class AttributesTestCase(TestCaseBase):
         self._run_check(
             '<x><y z=""o"" /></x>',
             [
-                ("starttag", "x", []),
-                ("startendtag", "y", [("z", ""), ('o""', None)]),
+                ("starttag", "x", "", []),
+                ("startendtag", "y", 'z=""o""', ["is-selfclosing"]),
                 ("endtag", "x"),
             ],
         )
         self._run_check(
             '<x><y z="""" /></x>',
             [
-                ("starttag", "x", []),
-                ("startendtag", "y", [("z", ""), ('""', None)]),
+                ("starttag", "x", "", []),
+                ("startendtag", "y", 'z=""""', ["is-selfclosing"]),
                 ("endtag", "x"),
             ],
         )
@@ -1009,21 +1346,20 @@ class AttributesTestCase(TestCaseBase):
     def test_adjacent_attributes(self):
         self._run_check(
             '<a width="100%"cellspacing=0>',
-            [("starttag", "a", [("width", "100%"), ("cellspacing", "0")])],
+            [("starttag", "a", 'width="100%"cellspacing=0', [])],
         )
 
         self._run_check(
-            '<a id="foo"class="bar">',
-            [("starttag", "a", [("id", "foo"), ("class", "bar")])],
+            '<a id="foo"class="bar">', [("starttag", "a", 'id="foo"class="bar"', [])]
         )
 
     def test_missing_attribute_value(self):
-        self._run_check("<a v=>", [("starttag", "a", [("v", "")])])
+        self._run_check("<a v=>", [("starttag", "a", "v=", [])])
 
     def test_javascript_attribute_value(self):
         self._run_check(
             "<a href=javascript:popup('/popup/help.html')>",
-            [("starttag", "a", [("href", "javascript:popup('/popup/help.html')")])],
+            [("starttag", "a", "href=javascript:popup('/popup/help.html')", [])],
         )
 
     def test_end_tag_in_attribute_value(self):
@@ -1031,7 +1367,7 @@ class AttributesTestCase(TestCaseBase):
         self._run_check(
             "<a href='http://www.example.org/\">;'>spam</a>",
             [
-                ("starttag", "a", [("href", 'http://www.example.org/">;')]),
+                ("starttag", "a", "href='http://www.example.org/\">;'", []),
                 ("data", "spam"),
                 ("endtag", "a"),
             ],
@@ -1047,25 +1383,21 @@ class AttributesTestCase(TestCaseBase):
             "- <a href='/1/'><span class=en> library</span></a></table>"
         )
         expected = [
-            ("starttag", "html", []),
-            ("starttag", "body", [("bgcolor", "d0ca90"), ("text", "181008")]),
-            (
-                "starttag",
-                "table",
-                [("cellspacing", "0"), ("cellpadding", "1"), ("width", "100%")],
-            ),
-            ("starttag", "tr", []),
-            ("starttag", "td", [("align", "left")]),
-            ("starttag", "font", [("size", "-1")]),
+            ("starttag", "html", "", []),
+            ("starttag", "body", "bgcolor=d0ca90 text='181008'", []),
+            ("starttag", "table", "cellspacing=0 cellpadding=1 width=100%", []),
+            ("starttag", "tr", "", []),
+            ("starttag", "td", "align=left", []),
+            ("starttag", "font", "size=-1", []),
             ("data", "- "),
-            ("starttag", "a", [("href", "/rabota/")]),
-            ("starttag", "span", [("class", "en")]),
+            ("starttag", "a", "href=/rabota/", []),
+            ("starttag", "span", "class=en", []),
             ("data", " software-and-i"),
             ("endtag", "span"),
             ("endtag", "a"),
             ("data", "- "),
-            ("starttag", "a", [("href", "/1/")]),
-            ("starttag", "span", [("class", "en")]),
+            ("starttag", "a", "href='/1/'", []),
+            ("starttag", "span", "class=en", []),
             ("data", " library"),
             ("endtag", "span"),
             ("endtag", "a"),
@@ -1089,32 +1421,22 @@ class AttributesTestCase(TestCaseBase):
             '<div class,="bar" baz,="asd">'  # after names
         )
         expected = [
-            (
-                "starttag",
-                "div",
-                [
-                    ("class", "bar,baz=asd"),
-                ],
-            ),
-            ("starttag", "div", [("class", "bar"), (",baz", "asd")]),
-            ("starttag", "div", [("class", "bar,"), ("baz", "asd,")]),
-            (
-                "starttag",
-                "div",
-                [("class", "bar"), (",", None), ("baz", "asd"), (",", None)],
-            ),
-            ("starttag", "div", [("class", "bar"), (",", None)]),
-            ("starttag", "div", [("class", ",bar"), ("baz", ",asd")]),
-            ("starttag", "div", [("class", ',"bar"'), ("baz", ',"asd"')]),
-            ("starttag", "div", [(",class", "bar"), (",baz", "asd")]),
-            ("starttag", "div", [("class,", "bar"), ("baz,", "asd")]),
+            ("starttag", "div", "class=bar,baz=asd", []),
+            ("starttag", "div", 'class="bar",baz="asd"', []),
+            ("starttag", "div", "class=bar, baz=asd,", []),
+            ("starttag", "div", 'class="bar", baz="asd",', []),
+            ("starttag", "div", 'class="bar",', []),
+            ("starttag", "div", "class=,bar baz=,asd", []),
+            ("starttag", "div", 'class=,"bar" baz=,"asd"', []),
+            ("starttag", "div", ",class=bar ,baz=asd", []),
+            ("starttag", "div", 'class,="bar" baz,="asd"', []),
         ]
         self._run_check(html, expected)
 
     def test_weird_chars_in_unquoted_attribute_values(self):
         self._run_check(
             "<form action=bogus|&#()value>",
-            [("starttag", "form", [("action", "bogus|&#()value")])],
+            [("starttag", "form", "action=bogus|&#()value", [])],
         )
 
 
