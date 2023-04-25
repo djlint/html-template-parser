@@ -27,14 +27,14 @@ jobs:
         branch: ${{github.ref_name}}
         title: chore(sync) Syncing changes from ${{github.ref_name}} to alpha
 
-  main:
+  master:
     runs-on: ubuntu-latest
     if: github.ref_name == 'alpha'
     steps:
     - name: 💾 Checkout
       uses: actions/checkout@v3
       with:
-        ref: main
+        ref: master
 
     - name: 🛑 Reset promotion branch
       run: |
@@ -46,4 +46,4 @@ jobs:
       with:
         labels: automated pr
         branch: ${{github.ref_name}}
-        title: chore(sync) Syncing changes from ${{github.ref_name}} to main
+        title: chore(sync) Syncing changes from ${{github.ref_name}} to master
