@@ -6,6 +6,10 @@ on:
     - alpha
     - master
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions: {}
 jobs:
   test:
     name: python ${{ matrix.python-version }} on ${{ matrix.os }}

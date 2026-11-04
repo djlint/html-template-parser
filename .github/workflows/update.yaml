@@ -5,8 +5,15 @@ on:
     - dev
     - alpha
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+permissions: {}
 jobs:
   alpha:
+    permissions:
+      contents: write # to push the promotion branch
+      pull-requests: write # to open the pull request
     runs-on: ubuntu-latest
     if: github.ref_name == 'dev'
     steps:
@@ -28,6 +35,9 @@ jobs:
         title: chore(sync) Syncing changes from ${{github.ref_name}} to alpha
 
   master:
+    permissions:
+      contents: write # to push the promotion branch
+      pull-requests: write # to open the pull request
     runs-on: ubuntu-latest
     if: github.ref_name == 'alpha'
     steps:
